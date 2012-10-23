@@ -14,24 +14,19 @@ Syntax:
   box_bootstrap.py <box directory path> <emulator package name> <ROM package name> <OS boot disk package name>
 """
 
+from classicbox.archive import archive_extract
 import json
 import os
 import os.path
 import shutil
-import subprocess
 import sys
-import tempfile
 
 
 SCRIPT_DIRPATH = os.path.dirname(__file__)
 
-# The `unar` tool is used to extract archive files
-UNAR_BINARY_FILEPATH = os.path.join(
-    SCRIPT_DIRPATH, 'contrib', 'unar1.3', 'unar')
-
 # NOTE: We are temporarily cheating by mapping the package cache directory
 #       to the website contents, which would not normally be possible on
-#       on end user's machine. This also means that no existant package needs
+#       an end user's machine. This also means that no existant package needs
 #       to be downloaded to the cache (because it will already be there).
 PACKAGE_CACHE_DIRPATH = os.path.join(
     SCRIPT_DIRPATH, 'api.classicbox.io', 'packages')
@@ -126,19 +121,8 @@ def install_package_contents_to_directory(package_name, output_dirpath, expected
     archive_filepath = os.path.join(package_dirpath, 'files', archive_filename)
     
     # Extract the archive file to a temporary extraction directory
-    extraction_dirpath = tempfile.mkdtemp()
-    try:
-        if not os.path.exists(UNAR_BINARY_FILEPATH):
-            raise Exception('Unable to locate "unar" tool. Expected to find it at "%s".' % UNAR_BINARY_FILEPATH)
-        subprocess.check_call([
-            UNAR_BINARY_FILEPATH,
-            # recursively extract inner archives by default
-            '-forks', 'fork',   # save resource forks natively (OS X only)
-            '-no-quarantine',   # don't display warnings upon launch of extracted apps
-            '-no-directory',    # don't create an extra enclosing directory
-            '-output-directory', extraction_dirpath,
-            archive_filepath
-        ], stdout=DEVNULL, stderr=DEVNULL)
+    with archive_extract(archive_filepath) as archive:
+        extraction_dirpath = archive.extraction_dirpath
         
         # Locate the target item in the extraction directory
         target_itempath_components = archive_metadata['contents']
@@ -146,9 +130,6 @@ def install_package_contents_to_directory(package_name, output_dirpath, expected
         
         # Move the emulator binary to the output directory
         shutil.move(target_itempath, output_dirpath)
-    finally:
-        # Delete the extraction directory
-        shutil.rmtree(extraction_dirpath)
 
 
 def install_recommended_preferences(prefs_dirpath):

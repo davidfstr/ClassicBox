@@ -6,3 +6,6 @@
 
 # Command-line tools (hfsutils, unar)
 tools
+
+# Link to the package cache for the box_bootstrap command
+api.classicbox.io

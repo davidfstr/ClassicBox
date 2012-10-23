@@ -5,13 +5,11 @@ Support for HFS Extended (HFS+) disk images may be added in the future.
 Support for MFS disk images may be added in the future.
 """
 
+from classicbox.util import DEVNULL
 from collections import namedtuple
 import os
 import re
 import subprocess
-
-
-_DEVNULL = open(os.devnull, 'wb')
 
 
 """
@@ -41,7 +39,7 @@ def hfs_mount(disk_image_filepath):
     """
     subprocess.check_call(
         ['hmount', disk_image_filepath],
-        stdout=_DEVNULL, stderr=_DEVNULL)
+        stdout=DEVNULL, stderr=DEVNULL)
 
 
 def hfs_pwd():
@@ -51,7 +49,7 @@ def hfs_pwd():
     MacOS paths are bytestrings encoded in MacRoman, with colon (:) as the path
     component separator. For example: "Macintosh HD:System Folder:".
     """
-    return subprocess.check_output(['hpwd'], stderr=_DEVNULL)[:-1]
+    return subprocess.check_output(['hpwd'], stderr=DEVNULL)[:-1]
 
 
 def hfs_ls(dirpath=None):
@@ -65,7 +63,7 @@ def hfs_ls(dirpath=None):
     if dirpath is not None:
         hdir_command += [dirpath]
     
-    hdir_lines = subprocess.check_output(hdir_command, stderr=_DEVNULL).split('\n')[:-1]
+    hdir_lines = subprocess.check_output(hdir_command, stderr=DEVNULL).split('\n')[:-1]
     items = [_parse_hdir_line(line) for line in hdir_lines]
     return items
 

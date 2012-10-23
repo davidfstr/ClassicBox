@@ -7,15 +7,13 @@ Syntax:
     app_archive_install.py <box directory> <archive file>
 """
 
+from classicbox.archive import archive_extract
 from classicbox.disk import is_disk_image
 from classicbox.disk.hfs import hfs_ls
 from classicbox.disk.hfs import hfs_mount
 import os
 import os.path
-import subprocess
-import shutil
 import sys
-import tempfile
 
 
 RECOGNIZED_INSTALLER_APP_CREATORS = [
@@ -31,8 +29,9 @@ def main(args):
     (box_dirpath, archive_filepath) = args
     
     # Extract the archive
-    contents_dirpath = extract_archive_to_temporary_directory(archive_filepath)
-    try:
+    with archive_extract(archive_filepath) as archive:
+        contents_dirpath = archive.extraction_dirpath
+        
         # TODO: Probably will need to be smarter here for archives
         #       that expand with a single directory at the root
         
@@ -112,31 +111,8 @@ def main(args):
             # FIXME: ...
             # Look for the installed app and set it as the boot app
             raise NotImplementedError
-        
-    finally:
-        shutil.rmtree(contents_dirpath)
     
     pass
-
-
-# TODO: Merge this code with that in box_bootstrap.py
-def extract_archive_to_temporary_directory(archive_filepath):
-    extraction_dirpath = tempfile.mkdtemp()
-    try:
-        subprocess.check_call([
-            'unar',
-            # recursively extract inner archives by default
-            '-forks', 'fork',   # save resource forks natively (OS X only)
-            '-no-quarantine',   # don't display warnings upon launch of extracted apps
-            '-no-directory',    # don't create an extra enclosing directory
-            '-output-directory', extraction_dirpath,
-            archive_filepath
-        ], stdout=DEVNULL, stderr=DEVNULL)
-        
-        return extraction_dirpath
-    except:
-        shutil.rmtree(extraction_dirpath)
-        raise
 
 
 def mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):
