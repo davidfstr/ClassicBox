@@ -21,8 +21,6 @@ RECOGNIZED_INSTALLER_APP_CREATORS = [
     # TODO: What about InstallerVISE?
 ]
 
-DEVNULL = open(os.devnull, 'wb')
-
 
 def main(args):
     # Parse arguments

@@ -1,5 +1,5 @@
 """
-Miscellaneous internal utilities used by ClassicBox.
+Miscellaneous internal utilities.
 """
 
 import os
