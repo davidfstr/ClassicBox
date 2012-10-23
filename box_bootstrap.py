@@ -15,6 +15,7 @@ Syntax:
 """
 
 from classicbox.archive import archive_extract
+from classicbox.box import box_create
 import json
 import os
 import os.path
@@ -53,7 +54,7 @@ def main(args):
     # TODO: Automatically download the specified packages if necessary.
     #       (Currently we just assume that they're already available.)
     
-    create_empty_box(box_dirpath)
+    box_create(box_dirpath)
     try:
         install_binary_from_emulator_package(
             emulator_package_name,
@@ -74,16 +75,6 @@ def main(args):
         shutil.rmtree(box_dirpath)
         
         raise
-
-
-def create_empty_box(box_dirpath):
-    os.mkdir(box_dirpath)
-    os.mkdir(os.path.join(box_dirpath, 'bin'))
-    os.mkdir(os.path.join(box_dirpath, 'etc'))
-    os.mkdir(os.path.join(box_dirpath, 'mount'))
-    os.mkdir(os.path.join(box_dirpath, 'mount-disabled'))
-    os.mkdir(os.path.join(box_dirpath, 'rom'))
-    os.mkdir(os.path.join(box_dirpath, 'share'))
 
 
 def install_binary_from_emulator_package(package_name, output_dirpath):
