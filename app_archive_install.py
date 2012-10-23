@@ -8,10 +8,10 @@ Syntax:
 """
 
 from classicbox.disk import is_disk_image
-from collections import namedtuple
+from classicbox.disk.hfs import hfs_ls
+from classicbox.disk.hfs import hfs_mount
 import os
 import os.path
-import re
 import subprocess
 import shutil
 import sys
@@ -56,13 +56,10 @@ def main(args):
             raise NotImplementedError('Found multiple disk images in archive. Not sure what to do.')
         
         # Open the primary disk image
-        subprocess.check_call(
-            ['hmount', primary_disk_image_filepath],
-            stdout=DEVNULL, stderr=DEVNULL)
+        hfs_mount(primary_disk_image_filepath)
         
         # List the root items
-        hdir_lines = subprocess.check_output(['hdir']).split('\n')[:-1]
-        root_items = [parse_hdir_line(line) for line in hdir_lines]
+        root_items = hfs_ls()
         
         # Look for installer apps
         installer_app_items = []
@@ -140,40 +137,6 @@ def extract_archive_to_temporary_directory(archive_filepath):
     except:
         shutil.rmtree(extraction_dirpath)
         raise
-
-
-def is_disk_image(filename):
-    for ext in DISK_IMAGE_EXTENSIONS:
-        if filename.endswith(ext):
-            return True
-    return False
-
-
-HFSItem = namedtuple('HFSItem', 'name, is_file, type, creator, data_size, rsrc_size, date_modified')
-
-FILE_LINE_RE = re.compile(r'f  (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)')
-DIR_LINE_RE = re.compile(r'd +([0-9]+) items? +([^ ]...........) (.+)')
-
-# TODO: Merge with original copy in catalog_create.py
-def parse_hdir_line(line):
-    """
-    Arguments:
-    * line -- A line from the `hdir` command.
-    
-    Returns:
-    * an HFSItem
-    """
-    file_matcher = FILE_LINE_RE.match(line)
-    if file_matcher is not None:
-        (type, creator, data_size, rsrc_size, date_modified, name) = file_matcher.groups()
-        return HFSItem(name, True, type, creator, data_size, rsrc_size, date_modified)
-    
-    dir_matcher = DIR_LINE_RE.match(line)
-    if dir_matcher is not None:
-        (num_children, date_modified, name) = dir_matcher.groups()
-        return HFSItem(name, False, '    ', '    ', 0, 0, date_modified)
-    
-    raise ValueError('Unable to parse hdir output line: %s' % line)
 
 
 def mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):

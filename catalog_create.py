@@ -19,11 +19,12 @@ Catalog Format:
     * Directory: (name : unicode, date_modified : unicode, DirectoryListing)
 """
 
+from classicbox.disk.hfs import hfs_ls
+from classicbox.disk.hfs import hfs_mount
+from classicbox.disk.hfs import hfs_pwd
 import json
 import os.path
 import pprint
-import re
-import subprocess
 import sys
 
 
@@ -53,10 +54,9 @@ def main(args):
 
 def scan_disk_contents(dsk_filepath):
     # NOTE: Will fail if the specified file is not an HFS Standard disk image
-    subprocess.check_call(['hmount', dsk_filepath],
-        stdout=subprocess.PIPE) # HACK: Ignore (small amount of) output
+    hfs_mount(dsk_filepath)
     
-    volume_dirpath = subprocess.check_output(['hpwd'])[:-1]
+    volume_dirpath = hfs_pwd()
     volume_name = volume_dirpath[:-1]   # chop trailing ':'
     
     # NOTE: Constructs entire disk catalog in memory, which could be large.
@@ -64,42 +64,15 @@ def scan_disk_contents(dsk_filepath):
 
 
 def list_descendants(parent_dirpath):
-    hdir_lines = subprocess.check_output(['hdir', parent_dirpath]).split('\n')[:-1]
-    
     tree = []
-    for line in hdir_lines:
-        (name, date_modified, is_file) = parse_hdir_line(line)
-        if is_file:
-            tree.append((name.decode('macroman'), date_modified.decode('ascii')))
+    for item in hfs_ls(parent_dirpath):
+        if item.is_file:
+            tree.append((item.name.decode('macroman'), item.date_modified.decode('ascii')))
         else:
-            descendants = list_descendants(parent_dirpath + name + ':')
-            tree.append((name.decode('macroman'), date_modified.decode('ascii'), descendants))
+            descendants = list_descendants(parent_dirpath + item.name + ':')
+            tree.append((item.name.decode('macroman'), item.date_modified.decode('ascii'), descendants))
     
     return tree
-
-
-FILE_LINE_RE = re.compile(r'f  (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)')
-DIR_LINE_RE = re.compile(r'd +([0-9]+) items? +([^ ]...........) (.+)')
-
-def parse_hdir_line(line):
-    """
-    Arguments:
-    line -- A line from the `hdir` command.
-    
-    Returns:
-    (name : str-MacRoman, date_modified : str, is_file : bool)
-    """
-    file_matcher = FILE_LINE_RE.match(line)
-    if file_matcher is not None:
-        (type, creator, data_size, rsrc_size, date_modified, name) = file_matcher.groups()
-        return (name, date_modified, True)
-    
-    dir_matcher = DIR_LINE_RE.match(line)
-    if dir_matcher is not None:
-        (num_children, date_modified, name) = dir_matcher.groups()
-        return (name, date_modified, False)
-    
-    raise ValueError('Unable to parse hdir output line: %s' % line)
 
 
 if __name__ == '__main__':

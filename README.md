@@ -25,6 +25,7 @@ As such, there is very little public documentation beyond this README. As pieces
     * [hfsutils] 3.2.6
         * hmount
         * hdir
+        * hpwd
     * [unar] 1.3
         * unar
 
