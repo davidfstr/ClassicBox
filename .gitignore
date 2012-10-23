@@ -3,3 +3,6 @@
 
 # Python
 *.pyc
+
+# Command-line tools (hfsutils, unar)
+tools
