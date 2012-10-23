@@ -7,6 +7,7 @@ Syntax:
     app_archive_install.py <box directory> <archive file>
 """
 
+from classicbox.disk import is_disk_image
 from collections import namedtuple
 import os
 import os.path
@@ -16,12 +17,6 @@ import shutil
 import sys
 import tempfile
 
-
-DISK_IMAGE_EXTENSIONS = [
-    '.dsk', '.hfv', # Raw disk image
-    '.toast',       # Toast disk image
-    # TODO: Probably more disk image types...
-]
 
 RECOGNIZED_INSTALLER_APP_CREATORS = [
     'STi0',         # Stuffit InstallerMaker

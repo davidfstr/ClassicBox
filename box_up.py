@@ -11,6 +11,8 @@ the emulator with that preferences file.
 This is a tracer.
 """
 
+from classicbox.disk import is_basilisk_supported_disk_image
+from classicbox.disk import is_mini_vmac_supported_disk_image
 import md5
 import os
 import os.path
@@ -125,10 +127,7 @@ def main(args):
         disk_filepaths = []
         for root, dirs, files in os.walk(mount_dirpath):
             for file in files:
-                # TODO: Check whether other disk image formats are
-                #       supported by Mini vMac.
-                #       (Basilisk and SheepShaver support a TON of formats.)
-                if (file.lower().endswith('.dsk')):     # Raw disk image
+                if is_mini_vmac_supported_disk_image(file):
                     disk_filepaths.append(os.path.join(root, file))
         
         # Create a symlink to the ROM file with the name required by Mini vMac,
@@ -187,14 +186,7 @@ def main(args):
             prefs.write('# Disks\n')
             for root, dirs, files in os.walk(mount_dirpath):
                 for file in files:
-                    if (file.lower().endswith('.dsk') or    # Raw disk image
-                        file.lower().endswith('.toast') or  # Toast disk image
-                        # NOTE: Basilisk doesn't seem to consistently be able mount .img and .dmg correctly.
-                        #       Workaround by converting to a .dsk using the `dd` tool.
-                        #       [TODO: Inspect the Basilisk source to see if it attempts to support UDIF/NDIF images.]
-                        #file.lower().endswith('.dmg') or    # UDIF disk image
-                        #file.lower().endswith('.img') or    # NDIF disk image (Disk Copy 6.3)
-                        file.lower().endswith('.iso')):     # ISO disk image
+                    if is_basilisk_supported_disk_image(file):
                         prefs.write('disk ' + os.path.join(root, file) + '\n')
             
             # Write shared folder section
