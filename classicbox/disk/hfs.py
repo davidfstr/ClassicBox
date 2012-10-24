@@ -24,7 +24,9 @@ Fields:
 * rsrc_size : int
 * date_modified : str-ascii
 """
-HFSItem = namedtuple('HFSItem', 'name, is_file, type, creator, data_size, rsrc_size, date_modified')
+HFSItem = namedtuple(
+    'HFSItem',
+    ('name', 'is_file', 'type', 'creator', 'data_size', 'rsrc_size', 'date_modified'))
 
 
 def hfs_mount(disk_image_filepath):
