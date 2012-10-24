@@ -39,8 +39,23 @@ _ALIAS_RECORD_MEMBERS = [
     _StructMember('volume_attributes',      'unsigned', 4,      0),     # may be 0
     _StructMember('volume_filesystem_id',   'fixed_string', 2,  0),     # 0 for MFS or HFS
     _StructMember('reserved',               'fixed_string', 10, 0),
-    _StructMember('extra',                  'until_eof', None,  None),
+    _StructMember('extras',                 'extras', None,  None),
+    _StructMember('trailing',               'until_eof', None,  None),
 ]
+
+_ExtraType = namedtuple(
+    '_ExtraType',
+    ('code', 'name'))
+
+_EXTRA_TYPES = [
+    _ExtraType(0, 'parent_directory_name'),
+    _ExtraType(1, 'path_ids'),
+    _ExtraType(0xFFFF, 'end'),
+]
+
+Extra = namedtuple(
+    'Extra',
+    ('type', 'name', 'value'))
 
 # ------------------------------------------------------------------------------
 
@@ -89,9 +104,13 @@ def print_alias_record(alias_record):
 
 
 def read_alias_record(input):
+    return read_structure(_ALIAS_RECORD_MEMBERS, input)
+
+
+def read_structure(structure_members, input):
     v = {}
     this_module = globals()
-    for member in _ALIAS_RECORD_MEMBERS:
+    for member in structure_members:
         v[member.name] = this_module['read_' + member.type](input, member.subtype)
     return v
 
@@ -104,7 +123,12 @@ def read_unsigned(input, num_bytes):
     value = 0
     for i in xrange(num_bytes):
         value = value << 8
-        value += ord(input.read(1))
+        
+        c = input.read(1)
+        if c == '' and i == 0:
+            # Special case that read_extras cares about
+            raise EOFError
+        value = value | ord(c)
     return value
 
 
@@ -115,14 +139,71 @@ def read_pascal_string(input, max_string_length):
     return str
 
 
+def read_extras(input, ignored):
+    extras = []
+    this_module = globals()
+    while True:
+        try:
+            extra_type = read_unsigned(input, 2)
+        except EOFError:
+            if extras == []:
+                # EOF'ed immediately. No extras.
+                return extras
+            else:
+                raise
+        extra_length = read_unsigned(input, 2)
+        extra_content = read_fixed_string(input, extra_length)
+        if extra_length & 0x1 == 1:
+            input.read(1)   # padding byte
+        
+        for type in _EXTRA_TYPES:
+            if extra_type == type.code:
+                extra_name = type.name
+                extra_value = this_module['read_' + type.name + '_extra_content'](extra_content)
+                break
+        else:
+            extra_name = 'unknown'
+            extra_value = read_unknown_extra_content(extra_content)
+        
+        extras.append(Extra(extra_type, extra_name, extra_value))
+        if extra_name == 'end':
+            break
+    
+    return extras
+
+
+def read_parent_directory_name_extra_content(extra_content):
+    return extra_content
+
+
+def read_path_ids_extra_content(extra_content):
+    extra_value = []
+    extra_content_input = StringIO(extra_content)
+    for i in xrange(len(extra_content) // 4):
+        extra_value.append(read_unsigned(extra_content_input, 4))
+    return extra_value
+
+
+def read_end_extra_content(extra_content):
+    return None
+
+
+def read_unknown_extra_content(extra_content):
+    return extra_content
+
+
 def read_until_eof(input, ignored):
     return input.read()
 
 # ------------------------------------------------------------------------------
 
 def write_alias_record(output, **fieldargs):
+    write_structure(_ALIAS_RECORD_MEMBERS, output, **fieldargs)
+
+
+def write_structure(structure_members, output, **fieldargs):
     this_module = globals()
-    for member in _ALIAS_RECORD_MEMBERS:
+    for member in structure_members:
         value = fieldargs.get(member.name, member.default_value)
         if value is None:
             raise ValueError('No value specified for member "%s", which has no default value.' % member.name)
@@ -153,6 +234,40 @@ def write_pascal_string(output, max_string_length, value):
     output.write(value)
     for i in xrange(max_string_length - str_length):
         output.write(chr(0))
+
+
+def write_extras(output, ignored, value):
+    extras = value
+    
+    this_module = globals()
+    for extra in extras:
+        extra_content_output = StringIO()
+        this_module['write_' + extra.name + '_extra_content'](extra_content_output, extra.value)
+        extra_content = extra_content_output.getvalue()
+        extra_length = len(extra_content)
+        
+        write_unsigned(output, 2, extra.type)
+        write_unsigned(output, 2, extra_length)
+        output.write(extra_content)
+        if extra_length & 0x1 == 1:
+            output.write(chr(0))    # padding byte
+
+
+def write_parent_directory_name_extra_content(output, extra_value):
+    output.write(extra_value)
+
+
+def write_path_ids_extra_content(output, extra_value):
+    for path_id in extra_value:
+        write_unsigned(output, 4, path_id)
+
+
+def write_end_extra_content(output, extra_value):
+    pass
+
+
+def write_unknown_extra_content(output, extra_value):
+    output.write(extra_value)
 
 
 def write_until_eof(output, ignored, value):
