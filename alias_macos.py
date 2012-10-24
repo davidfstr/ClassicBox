@@ -49,7 +49,14 @@ _ExtraType = namedtuple(
 
 _EXTRA_TYPES = [
     _ExtraType(0, 'parent_directory_name'),
-    _ExtraType(1, 'path_ids'),
+    _ExtraType(1, 'directory_ids'),
+    _ExtraType(2, 'absolute_path'),
+    # 3 = AppleShare Zone Name
+    # 4 = AppleShare Server Name
+    # 5 = AppleShare User Name
+    # 6 = Driver Name
+    # 9 = Revised AppleShare info
+    # 10 = AppleRemoteAccess dialup info
     _ExtraType(0xFFFF, 'end'),
 ]
 
@@ -98,7 +105,14 @@ def print_alias_record(alias_record):
     print 'Alias Information'
     print '================='
     for member in _ALIAS_RECORD_MEMBERS:
-        print '%s: %s' % (member.name, repr(alias_record[member.name]))
+        value = alias_record[member.name]
+        
+        if member.name == 'extras':
+            print 'extras:'
+            for extra in value:
+                print '    ' + repr(extra)
+        else:
+            print '%s: %s' % (member.name, repr(value))
 
 # ------------------------------------------------------------------------------
 
@@ -176,12 +190,16 @@ def read_parent_directory_name_extra_content(extra_content):
     return extra_content
 
 
-def read_path_ids_extra_content(extra_content):
+def read_directory_ids_extra_content(extra_content):
     extra_value = []
     extra_content_input = StringIO(extra_content)
     for i in xrange(len(extra_content) // 4):
         extra_value.append(read_unsigned(extra_content_input, 4))
     return extra_value
+
+
+def read_absolute_path_extra_content(extra_content):
+    return extra_content
 
 
 def read_end_extra_content(extra_content):
@@ -257,9 +275,13 @@ def write_parent_directory_name_extra_content(output, extra_value):
     output.write(extra_value)
 
 
-def write_path_ids_extra_content(output, extra_value):
+def write_directory_ids_extra_content(output, extra_value):
     for path_id in extra_value:
         write_unsigned(output, 4, path_id)
+
+
+def write_absolute_path_extra_content(output, extra_value):
+    output.write(extra_value)
 
 
 def write_end_extra_content(output, extra_value):
