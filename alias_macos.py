@@ -39,8 +39,8 @@ _ALIAS_RECORD_MEMBERS = [
     _StructMember('volume_attributes',      'unsigned', 4,      0),     # may be 0
     _StructMember('volume_filesystem_id',   'fixed_string', 2,  0),     # 0 for MFS or HFS
     _StructMember('reserved',               'fixed_string', 10, 0),
-    _StructMember('extras',                 'extras', None,  None),
-    _StructMember('trailing',               'until_eof', None,  None),
+    _StructMember('extras',                 'extras', None,     []),
+    _StructMember('trailing',               'until_eof', None,  ''),
 ]
 
 _ExtraType = namedtuple(
