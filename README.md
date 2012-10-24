@@ -3,11 +3,9 @@
 Allows one-click installation of arbitrary Mac OS 0.x - 9.x
 games and apps from the 1980s and 1990s.
 
-## Development Status
-
-This project is in active development.
-
-As such, there is very little public documentation beyond this README. As pieces stabilize, they will be documented.
+This project is a work in progress at the moment and is under active development.
+As such, there is very little public documentation beyond this README.
+Breaking changes may happen often during this time.
 
 ## Requirements
 
@@ -31,3 +29,9 @@ As such, there is very little public documentation beyond this README. As pieces
 
 [hfsutils]: http://www.mars.org/home/rob/proj/hfs/
 [unar]: http://unarchiver.c3.cx/commandline
+
+## License
+
+Copyright (c) 2012 David Foster. All rights reserved.
+
+A more permissive license will be chosen in the future.
