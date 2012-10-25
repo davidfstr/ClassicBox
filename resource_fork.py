@@ -68,10 +68,8 @@ def main(args):
                 _RESOURCE_MAP_HEADER_MEMBERS, 'Resource Map')
         
         # Read all resource types
-        # FIXME: Simplify these structures as list comprehensions
-        resource_types = []
-        for i in xrange(resource_map['resource_type_count_minus_one'] + 1):
-            resource_types.append(read_resource_type(input))
+        resource_type_count = resource_map['resource_type_count_minus_one'] + 1
+        resource_types = [read_resource_type(input) for i in xrange(resource_type_count)]
         
         if VERBOSE:
             print '######################'
@@ -86,9 +84,9 @@ def main(args):
         # Read all resource references
         for type in resource_types:
             # Read resource reference list for this resource type
-            resource_references = []
-            for i in xrange(type['resource_count_minus_one'] + 1):
-                resource_references.append(read_resource_reference(input))
+            resource_reference_count = type['resource_count_minus_one'] + 1
+            resource_references = [read_resource_reference(input) for i in 
+                xrange(resource_reference_count)]
             
             if VERBOSE:
                 print '########################'
