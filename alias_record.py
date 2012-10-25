@@ -274,6 +274,7 @@ def read_until_eof(input, ignored):
 
 # ------------------------------------------------------------------------------
 
+# TODO: Don't use kwargs. Just a plain dictionary will do.
 def write_alias_record(output, **fieldargs):
     if 'record_size' in fieldargs:
         write_structure(output, _ALIAS_RECORD_MEMBERS, **fieldargs)
@@ -290,6 +291,7 @@ def write_alias_record(output, **fieldargs):
         output.seek(end_offset)
 
 
+# TODO: Don't use kwargs. Just a plain dictionary will do.
 def write_structure(output, structure_members, **fieldargs):
     this_module = globals()
     for member in structure_members:

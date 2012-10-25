@@ -20,10 +20,10 @@ _RESOURCE_FORK_HEADER_MEMBERS = [
 ]
 
 _RESOURCE_MAP_HEADER_MEMBERS = [
-    _StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, None),
-    _StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, None),
-    _StructMember('reserved_for_file_reference_number', 'unsigned', 2, None),
-    _StructMember('resource_fork_attributes', 'unsigned', 2, None),
+    _StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, 0),
+    _StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, 0),
+    _StructMember('reserved_for_file_reference_number', 'unsigned', 2, 0),
+    _StructMember('attributes', 'unsigned', 2, None),
     _StructMember('offset_to_resource_type_list', 'unsigned', 2, None),
     _StructMember('offset_to_resource_name_list', 'unsigned', 2, None),
     _StructMember('resource_type_count_minus_one', 'unsigned', 2, None),
@@ -41,7 +41,7 @@ _RESOURCE_REFERENCE_MEMBERS = [
         # -1 if the resource has no name
     _StructMember('attributes', 'unsigned', 1, None),
     _StructMember('offset_from_resource_data_area_to_data', 'unsigned', 3, None),
-    _StructMember('reserved_for_handle', 'unsigned', 4, None),
+    _StructMember('reserved_for_handle', 'unsigned', 4, 0),
 ]
 
 # ------------------------------------------------------------------------------
