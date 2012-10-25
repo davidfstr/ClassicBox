@@ -274,7 +274,19 @@ def read_until_eof(input, ignored):
 # ------------------------------------------------------------------------------
 
 def write_alias_record(output, **fieldargs):
-    write_structure(output, _ALIAS_RECORD_MEMBERS, **fieldargs)
+    if 'record_size' in fieldargs:
+        write_structure(output, _ALIAS_RECORD_MEMBERS, **fieldargs)
+    else:
+        # Write record, except for the 'record_size' field
+        start_offset = output.tell()
+        write_structure(output, _ALIAS_RECORD_MEMBERS, record_size=0, **fieldargs)
+        end_offset = output.tell()
+        
+        # Write the 'record_size' field
+        output.seek(start_offset + 4)
+        record_size = end_offset - start_offset
+        write_unsigned(output, 2, record_size)
+        output.seek(end_offset)
 
 
 def write_structure(output, structure_members, **fieldargs):
