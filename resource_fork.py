@@ -5,6 +5,7 @@ Reads resource forks.
 """
 
 # TODO: Extract common methods to classicbox.io.
+from alias_record import read_pascal_string
 from alias_record import read_structure
 from alias_record import _StructMember
 
@@ -46,6 +47,7 @@ _RESOURCE_REFERENCE_MEMBERS = [
 # ------------------------------------------------------------------------------
 
 VERBOSE = True
+READ_RESOURCE_NAMES = True
 
 def main(args):
     (resource_file_filepath, ) = args
@@ -104,6 +106,29 @@ def main(args):
         # Record useful information in the resource map structure
         resource_map['absolute_offset'] = resource_map_absolute_offset
         resource_map['resource_types'] = resource_types
+        
+        if READ_RESOURCE_NAMES:
+            if VERBOSE:
+                print '######################'
+                print '### Resource Names ###'
+                print '######################'
+                print
+            
+            for type in resource_map['resource_types']:
+                for resource in type['resources']:
+                    absolute_offset_to_resource_name = (
+                        resource_map['absolute_offset'] +
+                        resource_map['offset_to_resource_name_list'] +
+                        resource['offset_from_resource_name_list_to_name'])
+                    
+                    input.seek(absolute_offset_to_resource_name)
+                    resource_name = read_pascal_string(input, None)
+                    
+                    if VERBOSE:
+                        print '\'%s\' %s: "%s"' % (type['code'], resource['id'], resource_name)
+            
+            if VERBOSE:
+                print
 
 
 def print_structure(structure, members, name):

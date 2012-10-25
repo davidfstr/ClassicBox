@@ -207,7 +207,8 @@ def read_unsigned(input, num_bytes):
 def read_pascal_string(input, max_string_length):
     str_length = ord(input.read(1))
     str = input.read(str_length)
-    zero = input.read(max_string_length - str_length)
+    if max_string_length is not None:
+        zero = input.read(max_string_length - str_length)
     return str
 
 
@@ -320,8 +321,9 @@ def write_pascal_string(output, max_string_length, value):
     str_length = len(value)
     output.write(chr(str_length))
     output.write(value)
-    for i in xrange(max_string_length - str_length):
-        output.write(chr(0))
+    if max_string_length is not None:
+        for i in xrange(max_string_length - str_length):
+            output.write(chr(0))
 
 
 def write_extras(output, ignored, value):
