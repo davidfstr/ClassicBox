@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Manipulates MacOS alias files.
+Manipulates MacOS alias records.
 """
 
 from collections import namedtuple
@@ -67,25 +67,27 @@ Extra = namedtuple(
 # ------------------------------------------------------------------------------
 
 def main(args):
-    # Path to a file that (in its data fork) contains the contents of an 'alis'
-    # resource, which is the primary resource contained in an alias file
-    (command, alias_resource_file_filepath) = args
+    # Path to a file that contains an alias record.
+    # 
+    # This is equivalent to the contents of an 'alis' resource,
+    # which is the primary resource contained in an alias file
+    (command, alias_record_file_filepath) = args
     
     if command == 'info':
-        with open(alias_resource_file_filepath, 'rb') as input:
+        with open(alias_record_file_filepath, 'rb') as input:
             alias_record = read_alias_record(input)
         
         print_alias_record(alias_record)
         
     elif command == 'test':
-        with open(alias_resource_file_filepath, 'rb') as input:
+        with open(alias_record_file_filepath, 'rb') as input:
             alias_record = read_alias_record(input)
         
         output = StringIO()
         write_alias_record(output, **alias_record)
         
         actual_output = output.getvalue()
-        with open(alias_resource_file_filepath, 'rb') as file:
+        with open(alias_record_file_filepath, 'rb') as file:
             expected_output = file.read()
         
         matches = (actual_output == expected_output)

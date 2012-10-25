@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """
-Manipulates resource forks.
+Reads resource forks.
 """
 
 # TODO: Extract common methods to classicbox.io.
-from alias_macos import read_structure
-from alias_macos import _StructMember
+from alias_record import read_structure
+from alias_record import _StructMember
 
 import sys
 
