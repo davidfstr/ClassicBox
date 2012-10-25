@@ -118,10 +118,10 @@ def print_alias_record(alias_record):
 
 
 def read_alias_record(input):
-    return read_structure(_ALIAS_RECORD_MEMBERS, input)
+    return read_structure(input, _ALIAS_RECORD_MEMBERS)
 
 
-def read_structure(structure_members, input):
+def read_structure(input, structure_members):
     v = {}
     this_module = globals()
     for member in structure_members:
@@ -216,10 +216,10 @@ def read_until_eof(input, ignored):
 # ------------------------------------------------------------------------------
 
 def write_alias_record(output, **fieldargs):
-    write_structure(_ALIAS_RECORD_MEMBERS, output, **fieldargs)
+    write_structure(output, _ALIAS_RECORD_MEMBERS, **fieldargs)
 
 
-def write_structure(structure_members, output, **fieldargs):
+def write_structure(output, structure_members, **fieldargs):
     this_module = globals()
     for member in structure_members:
         value = fieldargs.get(member.name, member.default_value)
