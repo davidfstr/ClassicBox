@@ -105,6 +105,18 @@ def write_resource_fork(output, resource_map):
     resource_data_area_length = next_data_offset
     resource_name_list_length = next_name_offset
     
+    resource_map_header_length = (
+        sizeof_structure(_RESOURCE_MAP_HEADER_MEMBERS) +
+        # (Apparently the 'resource_type_count_minus_one' field at the end of
+        #  the resource map header is considered part of the resource type list)
+        -2
+    )
+    resource_type_list_length = (
+        # (Apparently the 'resource_type_count_minus_one' field at the end of
+        #  the resource map header is considered part of the resource type list)
+        2 +
+        len(resource_types) * sizeof_structure(_RESOURCE_TYPE_MEMBERS))
+    
     # Compute offsets within the reference list area,
     # that resource types refer to
     next_reference_list_area_offset = 0
@@ -118,15 +130,16 @@ def write_resource_fork(output, resource_map):
                  'from the resource map before serialization') % type['code'])
         type['resource_count_minus_one'] = resource_count - 1
         
-        type['offset_from_resource_type_list_to_reference_list'] = next_reference_list_area_offset
+        type['offset_from_resource_type_list_to_reference_list'] = (
+            resource_type_list_length +
+            next_reference_list_area_offset
+        )
         next_reference_list_area_offset += reference_list_length
     
     reference_list_area_length = next_reference_list_area_offset
     
     # Compute offsets within the resource map,
     # that the resource map header refers to
-    resource_map_header_length = sizeof_structure(_RESOURCE_MAP_HEADER_MEMBERS)
-    resource_type_list_length = (len(resource_types) * sizeof_structure(_RESOURCE_TYPE_MEMBERS))
     resource_map_length = (
         resource_map_header_length +
         resource_type_list_length +
@@ -192,6 +205,7 @@ def write_resource_map(output, resource_map):
     for type in resource_map['resource_types']:
         for resource in type['resources']:
             write_pascal_string(output, None, resource['name'])
+            # (Consider writing a padding byte if not word-aligned.)
 
 
 def write_resource_map_header(output, resource_map_header):

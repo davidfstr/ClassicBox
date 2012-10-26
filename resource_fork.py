@@ -17,6 +17,12 @@ _RESOURCE_FORK_HEADER_MEMBERS = [
     _StructMember('offset_to_resource_map', 'unsigned', 4, None),
     _StructMember('resource_data_area_length', 'unsigned', 4, None),
     _StructMember('resource_map_length', 'unsigned', 4, None),
+    
+    # The format of this member is undocumented. If omitted, ResEdit will
+    # complain that the resulting resource fork is damaged. Reserving the
+    # appropriate amount of space and filling it with zeros seems to make
+    # ResEdit happy.
+    _StructMember('reserved_for_system_use', 'fixed_string', 256 - 16, 0),
 ]
 
 _RESOURCE_MAP_HEADER_MEMBERS = [
