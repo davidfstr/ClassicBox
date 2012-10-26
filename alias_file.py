@@ -5,7 +5,9 @@ Manipulates MacOS alias files.
 """
 
 # TODO: Extract common methods to classicbox.alias and classicbox.io.
+from alias_record import _ALIAS_RECORD_MEMBERS
 from alias_record import Extra
+from alias_record import print_alias_record
 from alias_record import write_alias_record
 from alias_record import write_pascal_string
 from alias_record import write_structure
@@ -17,6 +19,10 @@ from resource_fork import _RESOURCE_MAP_HEADER_MEMBERS
 from resource_fork import _RESOURCE_REFERENCE_MEMBERS
 from resource_fork import _RESOURCE_TYPE_MEMBERS
 
+from classicbox.disk.hfs import hfs_mount
+from classicbox.disk.hfs import hfs_stat
+from classicbox.disk.hfs import hfspath_dirpath
+from classicbox.disk.hfs import hfspath_normpath
 from StringIO import StringIO
 import os.path
 import sys
@@ -25,15 +31,29 @@ import sys
 
 def main(args):
     # Parse arguments
+    command = args.pop(0)
     force = (len(args) >= 1 and args[0] == '-f')
     if force:
         args = args[1:]
-    (output_alias_resource_fork_file, ) = args
+    output_alias_resource_fork_file = args.pop(0)
     
     # Don't let the user inadvertently clobber an existing file
     if not force and os.path.exists(output_alias_resource_fork_file):
         sys.exit('File exists: %s' % output_alias_resource_fork_file)
         return
+    
+    if command == 'write_fixed':
+        write_fixed_alias_resource_fork_file(output_alias_resource_fork_file)
+    elif command == 'write_targeted':
+        write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, args)
+    else:
+        sys.exit('Unknown command: %s' % command)
+        return
+
+def write_fixed_alias_resource_fork_file(output_alias_resource_fork_file):
+    """
+    Writes a fixed alias resource fork file to disk.
+    """
     
     # "AppAlias.rsrc.dat"
     alis_resource_contents_output = StringIO()
@@ -75,6 +95,170 @@ def main(args):
                 }
             ]
         })
+
+
+def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, args):
+    """
+    Writes an alias resource fork file that targets a particular
+    item in an HFS disk image.
+    """
+    
+    # Parse arguments
+    (disk_image_filepath, target_macitempath) = args
+    
+    volume_info = hfs_mount(disk_image_filepath)
+    
+    target_macitempath = hfspath_normpath(target_macitempath)
+    target_is_volume = target_macitempath.endswith(':')
+    
+    target_item_info = hfs_stat(target_macitempath)
+    
+    alias_resource_info = dict(
+        type='alis',
+        id=0,
+        name=target_item_info.name + ' alias',
+        attributes=0
+    )
+    
+    if target_is_volume:
+        # Target is volume
+        alias_record = dict(
+            alias_kind=1,                           # 1 = directory
+            volume_name=volume_info['name'],
+            volume_created=volume_info['created'],
+            parent_directory_id=1,                  # magic?
+            file_name=target_item_info.name,
+            file_number=target_item_info.id,
+            file_created=volume_info['created'],    # special case
+            file_type=0,    # random junk in native MacOS implementation
+            file_creator=0, # random junk in native MacOS implementation
+            nlvl_from=0xFFFF,   # assume alias file on different volume from target
+            nlvl_to=0xFFFF,     # assume alias file on different volume from target
+            extras=[
+                Extra(0xFFFF, 'end', None)
+            ]
+        )
+        
+        alias_file_info = dict(
+            alias_file_type='hdsk',
+            alias_file_creator='MACS'
+            # NOTE: The alias resource fork contains, in addition to 'alis',
+            #       resources of type {'ICN#', 'ics#', 'SICN'}.
+            #       Hence the USE_CUSTOM_ICON flag here.
+            #       I suspect that omitting the icon won't prevent the alias
+            #       from working, although Finder may draw it oddly.
+            #alias_file_flags=(ALIAS | INITED | USE_CUSTOM_ICON)
+        )
+        
+    else:
+        # Lookup ancestors
+        ancestor_infos = []
+        cur_ancestor_dirpath = hfspath_dirpath(target_macitempath)
+        while cur_ancestor_dirpath is not None:
+            ancestor_infos.append(hfs_stat(cur_ancestor_dirpath))
+            cur_ancestor_dirpath = hfspath_dirpath(cur_ancestor_dirpath)
+        
+        parent_dir_info = ancestor_infos[0]         # possibly a volume
+        ancestor_dir_infos = ancestor_infos[:-1]    # exclude volume
+        
+        if target_item_info.is_file:
+            # Target is file
+            alias_record = dict(
+                alias_kind=0,                       # 0 = file
+                volume_name=volume_info['name'],
+                volume_created=volume_info['created'],
+                parent_directory_id=parent_dir_info.id,
+                file_name=target_item_info.name,
+                file_number=target_item_info.id,
+                # NOTE: Can't get file_created reliably from hfsutil CLI
+                file_created=0,
+                file_type=target_item_info.type,
+                file_creator=target_item_info.creator,
+                nlvl_from=1,    # assume alias file on same volume as target
+                nlvl_to=1,      # assume alias file on same volume as target
+                extras=_create_standard_extras_list(
+                    parent_dir_info, ancestor_dir_infos, target_macitempath)
+            )
+            
+            if target_item_info.type == 'APPL':
+                # Target is application file
+                alias_file_info = dict(
+                    alias_file_type='adrp',
+                    alias_file_creator=target_item_info.creator
+                    #alias_file_flags=(ALIAS | INITED)
+                )
+                
+            else:
+                # Target is document file
+                alias_file_info = dict(
+                    alias_file_type=target_item_info.type,
+                    alias_file_creator='MPS '
+                    #alias_file_flags=(ALIAS | INITED)
+                )
+            
+        else:
+            # Target is folder
+            alias_record = dict(
+                alias_kind=1,                       # 1 = directory
+                volume_name=volume_info['name'],
+                volume_created=volume_info['created'],
+                parent_directory_id=parent_dir_info.id,
+                file_name=target_item_info.name,
+                file_number=target_item_info.id,
+                # NOTE: Can't get file_created reliably from hfsutil CLI
+                file_created=0,
+                file_type=0,    # random junk in native MacOS implementation
+                file_creator=0, # random junk in native MacOS implementation
+                nlvl_from=1,    # assume alias file on same volume as target
+                nlvl_to=1,      # assume alias file on same volume as target
+                extras=_create_standard_extras_list(
+                    parent_dir_info, ancestor_dir_infos, target_macitempath)
+            )
+            
+            alias_file_info = dict(
+                # NOTE: Type is 'fasy' if target is the System Folder. <sigh>
+                alias_file_type='fdrp',
+                alias_file_creator='MACS'
+                #alias_file_flags=(ALIAS | INITED)
+            )
+            
+            # Fun trivia! An alias to the Trash has:
+            # 
+            # - alias_kind=1        # 1 = directory
+            # - parent_directory_id=<directory id of boot volume>
+            # - file_name='Trash'
+            # - file_number=224     # a real directory!
+            # - file_type=0
+            # - file_creator=0
+            # - nlvl_from=2         # wut?
+            # - nlvl_to=1           # wut?
+            # - extras:
+            #       Extra(type=0, name='parent_directory_name', value='Boot')
+            #       Extra(type=2, name='absolute_path', value='Boot:Trash')
+            #       Extra(type=65535, name='end', value=None)
+            # 
+            # - (alias_file_type, alias_file_creator) = ('trsh', 'MACS')
+    
+    # Outputs from above logic:
+    # (1) alias_record
+    # (2) alias_resource_info
+    # (3) alias_file_info
+    
+    # Display the resulting alias record
+    fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
+    print_alias_record(alias_record)
+    
+    # TODO: Write to file: output_alias_resource_fork_file
+
+
+def _create_standard_extras_list(parent_dir_info, ancestor_dir_infos, target_macitempath):
+    extras = []
+    extras.append(Extra(0, 'parent_directory_name', parent_dir_info.name))
+    if len(ancestor_dir_infos) > 0:
+        extras.append(Extra(1, 'directory_ids', [d.id for d in ancestor_dir_infos]))
+    extras.append(Extra(2, 'absolute_path', target_macitempath))
+    extras.append(Extra(0xFFFF, 'end', None))
+    return extras
 
 # ------------------------------------------------------------------------------
 
@@ -231,6 +415,11 @@ def sizeof_structure(members):
         total_size += sizeof_member
     
     return total_size
+
+def fill_missing_structure_members_with_defaults(structure_members, structure):
+    for member in structure_members:
+        if member.name not in structure:
+            structure[member.name] = member.default_value
 
 # ------------------------------------------------------------------------------
 
