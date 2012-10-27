@@ -5,10 +5,10 @@ Manipulates MacBinary files.
 """
 
 # TODO: Extract common methods to classicbox.io.
-from alias_record import _StructMember
-from alias_record import read_structure
 from resource_fork import print_structure
 
+from classicbox.io import _StructMember
+from classicbox.io import read_structure
 import sys
 
 

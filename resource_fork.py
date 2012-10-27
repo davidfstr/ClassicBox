@@ -4,11 +4,9 @@
 Reads resource forks.
 """
 
-# TODO: Extract common methods to classicbox.io.
-from alias_record import read_pascal_string
-from alias_record import read_structure
-from alias_record import _StructMember
-
+from classicbox.io import _StructMember
+from classicbox.io import read_pascal_string
+from classicbox.io import read_structure
 import sys
 
 

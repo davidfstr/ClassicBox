@@ -9,9 +9,6 @@ from alias_record import _ALIAS_RECORD_MEMBERS
 from alias_record import Extra
 from alias_record import print_alias_record
 from alias_record import write_alias_record
-from alias_record import write_pascal_string
-from alias_record import write_structure
-from alias_record import write_unsigned
 
 # TODO: Extract common methods to classicbox.resource_fork.
 from resource_fork import _RESOURCE_FORK_HEADER_MEMBERS
@@ -23,6 +20,9 @@ from classicbox.disk.hfs import hfs_mount
 from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
 from classicbox.disk.hfs import hfspath_normpath
+from classicbox.io import write_pascal_string
+from classicbox.io import write_structure
+from classicbox.io import write_unsigned
 from StringIO import StringIO
 import os.path
 import sys

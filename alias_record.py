@@ -4,14 +4,17 @@
 Manipulates MacOS alias records.
 """
 
+from classicbox.io import _StructMember
+from classicbox.io import read_fixed_string
+from classicbox.io import read_structure
+from classicbox.io import read_unsigned
+from classicbox.io import write_structure
+from classicbox.io import write_unsigned
+
 from collections import namedtuple
 from StringIO import StringIO
 import sys
 
-
-_StructMember = namedtuple(
-    '_StructMember',
-    ('name', 'type', 'subtype', 'default_value'))
 
 # Alias file format reference: http://xhelmboyx.tripod.com/formats/alias-layout.txt
 _ALIAS_RECORD_MEMBERS = [
@@ -176,40 +179,9 @@ def verify_matches(output, alias_record_file_filepath, alias_record):
 
 
 def read_alias_record(input):
-    return read_structure(input, _ALIAS_RECORD_MEMBERS)
-
-
-def read_structure(input, structure_members):
-    v = {}
-    this_module = globals()
-    for member in structure_members:
-        v[member.name] = this_module['read_' + member.type](input, member.subtype)
-    return v
-
-
-def read_fixed_string(input, num_bytes):
-    return input.read(num_bytes)
-
-
-def read_unsigned(input, num_bytes):
-    value = 0
-    for i in xrange(num_bytes):
-        value = value << 8
-        
-        c = input.read(1)
-        if c == '' and i == 0:
-            # Special case that read_extras cares about
-            raise EOFError
-        value = value | ord(c)
-    return value
-
-
-def read_pascal_string(input, max_string_length):
-    str_length = ord(input.read(1))
-    str = input.read(str_length)
-    if max_string_length is not None:
-        zero = input.read(max_string_length - str_length)
-    return str
+    return read_structure(input, _ALIAS_RECORD_MEMBERS, external_readers={
+        'read_extras': read_extras
+    })
 
 
 def read_extras(input, ignored):
@@ -268,20 +240,18 @@ def read_end_extra_content(extra_content):
 def read_unknown_extra_content(extra_content):
     return extra_content
 
-
-def read_until_eof(input, ignored):
-    return input.read()
-
 # ------------------------------------------------------------------------------
 
 # TODO: Don't use kwargs. Just a plain dictionary will do.
 def write_alias_record(output, **fieldargs):
     if 'record_size' in fieldargs:
-        write_structure(output, _ALIAS_RECORD_MEMBERS, **fieldargs)
+        _write_alias_record_structure(output, fieldargs)
     else:
+        fieldargs['record_size'] = 0
+        
         # Write record, except for the 'record_size' field
         start_offset = output.tell()
-        write_structure(output, _ALIAS_RECORD_MEMBERS, record_size=0, **fieldargs)
+        _write_alias_record_structure(output, fieldargs)
         end_offset = output.tell()
         
         # Write the 'record_size' field
@@ -291,41 +261,10 @@ def write_alias_record(output, **fieldargs):
         output.seek(end_offset)
 
 
-# TODO: Don't use kwargs. Just a plain dictionary will do.
-def write_structure(output, structure_members, **fieldargs):
-    this_module = globals()
-    for member in structure_members:
-        value = fieldargs.get(member.name, member.default_value)
-        if value is None:
-            raise ValueError('No value specified for member "%s", which lacks a default value.' % member.name)
-        this_module['write_' + member.type](output, member.subtype, value)
-
-
-def write_fixed_string(output, num_bytes, value):
-    if value == 0:
-        value = '\x00' * num_bytes
-    if len(value) != num_bytes:
-        raise ValueError('Value does not have the expected byte count.')
-    output.write(value)
-
-
-def write_unsigned(output, num_bytes, value):
-    shift = (num_bytes - 1) * 8
-    mask = 0xFF << shift
-    
-    for i in xrange(num_bytes):
-        output.write(chr((value & mask) >> shift))
-        shift -= 8
-        mask = mask >> 8
-
-
-def write_pascal_string(output, max_string_length, value):
-    str_length = len(value)
-    output.write(chr(str_length))
-    output.write(value)
-    if max_string_length is not None:
-        for i in xrange(max_string_length - str_length):
-            output.write(chr(0))
+def _write_alias_record_structure(output, alias_record):
+    write_structure(output, _ALIAS_RECORD_MEMBERS, external_writers={
+        'write_extras': write_extras
+    }, **alias_record)
 
 
 def write_extras(output, ignored, value):
@@ -364,10 +303,6 @@ def write_end_extra_content(output, extra_value):
 
 def write_unknown_extra_content(output, extra_value):
     output.write(extra_value)
-
-
-def write_until_eof(output, ignored, value):
-    output.write(value)
 
 # ------------------------------------------------------------------------------
 
