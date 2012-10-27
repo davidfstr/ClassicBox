@@ -2,6 +2,7 @@
 Manipulates MacOS alias records.
 """
 
+from classicbox.io import at_eof
 from classicbox.io import read_fixed_string
 from classicbox.io import read_structure
 from classicbox.io import read_unsigned
@@ -73,17 +74,14 @@ def read_alias_record(input):
 
 
 def _read_extras(input, ignored):
+    if at_eof(input):
+        # EOF'ed immediately. No extras.
+        return []
+    
     extras = []
     this_module = globals()
     while True:
-        try:
-            extra_type = read_unsigned(input, 2)
-        except EOFError:
-            if extras == []:
-                # EOF'ed immediately. No extras.
-                return extras
-            else:
-                raise
+        extra_type = read_unsigned(input, 2)
         extra_length = read_unsigned(input, 2)
         extra_content = read_fixed_string(input, extra_length)
         if extra_length & 0x1 == 1:

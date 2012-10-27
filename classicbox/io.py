@@ -33,13 +33,7 @@ def read_unsigned(input, num_bytes):
     value = 0
     for i in xrange(num_bytes):
         value = value << 8
-        
-        c = input.read(1)
-        if c == '' and i == 0:
-            # Special case that read_extras cares about
-            # TODO: Rewrite read_extras to avoid need to pollute this common method
-            raise EOFError
-        value = value | ord(c)
+        value = value | ord(input.read(1))
     return value
 
 
@@ -143,3 +137,13 @@ def fill_missing_structure_members_with_defaults(structure_members, structure):
     for member in structure_members:
         if member.name not in structure:
             structure[member.name] = member.default_value
+
+
+def at_eof(input):
+    """
+    Returns whether the specified input stream is at EOF.
+    """
+    original_offset = input.tell()
+    at_eof = input.read(1) == ''
+    input.seek(original_offset)
+    return at_eof

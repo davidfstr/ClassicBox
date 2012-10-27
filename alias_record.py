@@ -29,6 +29,20 @@ def main(args):
         write_alias_record(output, alias_record)
         
         verify_matches(output, alias_record_file_filepath, alias_record)
+    
+    elif command == 'test_read_write_no_extras':
+        alias_record['extras'] = []
+        
+        output = StringIO()
+        write_alias_record(output, alias_record)
+        
+        output.seek(0)
+        alias_record_no_extras = read_alias_record(output)
+        
+        if alias_record_no_extras['extras'] == []:
+            print 'OK'
+        else:
+            print 'Expected empty extras.'
         
     elif command == 'test_write_custom_matching':
         test_write_custom_matching(alias_record_file_filepath, alias_record)
