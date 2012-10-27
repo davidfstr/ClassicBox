@@ -106,6 +106,51 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath,
     # Parse arguments
     (disk_image_filepath, target_macitempath) = args
     
+    alias_info = create_alias_info_for_item_on_disk_image(
+        disk_image_filepath, target_macitempath)
+    
+    alias_record = alias_info['alias_record']
+    alias_resource_info = alias_info['alias_resource_info']
+    alias_file_info = alias_info['alias_file_info']
+    
+    # Serialize alias record
+    alis_resource_contents_output = StringIO()
+    write_alias_record(alis_resource_contents_output, **alias_record)
+    alis_resource_contents = alis_resource_contents_output.getvalue()
+    
+    # Display the resulting alias record
+    fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
+    print_alias_record(alias_record)
+    
+    # Write alias file resource fork containing the alias record
+    with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
+        write_resource_fork(resource_fork_output, {
+            'attributes': 0,
+            'resource_types': [
+                {
+                    'code': alias_resource_info['type'],
+                    'resources': [
+                        {
+                            'id': alias_resource_info['id'],
+                            'name': alias_resource_info['name'],
+                            'attributes': alias_resource_info['attributes'],
+                            'data': alis_resource_contents
+                        }
+                    ]
+                }
+            ]
+        })
+
+
+def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitempath):
+    """
+    Creates an alias that targets the specified item on the specified disk image.
+    
+    Arguments:
+    * disk_image_filepath -- Path to a disk image.
+    * target_macitempath -- The absolute MacOS path to the desired target of 
+                            the alias, which resides on the disk image.
+    """
     # Normalize target path
     target_macitempath = hfspath_normpath(target_macitempath)
     
@@ -248,38 +293,11 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath,
             # 
             # - (alias_file_type, alias_file_creator) = ('trsh', 'MACS')
     
-    # Outputs from above logic:
-    # (1) alias_record
-    # (2) alias_resource_info
-    # (3) alias_file_info
-    
-    # Serialize alias record
-    alis_resource_contents_output = StringIO()
-    write_alias_record(alis_resource_contents_output, **alias_record)
-    alis_resource_contents = alis_resource_contents_output.getvalue()
-    
-    # Display the resulting alias record
-    fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
-    print_alias_record(alias_record)
-    
-    # Write alias file resource fork
-    with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
-        write_resource_fork(resource_fork_output, {
-            'attributes': 0,
-            'resource_types': [
-                {
-                    'code': alias_resource_info['type'],
-                    'resources': [
-                        {
-                            'id': alias_resource_info['id'],
-                            'name': alias_resource_info['name'],
-                            'attributes': alias_resource_info['attributes'],
-                            'data': alis_resource_contents
-                        }
-                    ]
-                }
-            ]
-        })
+    return {
+        'alias_record': alias_record,
+        'alias_resource_info': alias_resource_info,
+        'alias_file_info': alias_file_info,
+    }
 
 
 def _create_standard_extras_list(parent_dir_info, ancestor_dir_infos, target_macitempath):
