@@ -5,6 +5,7 @@ Manipulates MacOS resource forks.
 from classicbox.io import print_structure
 from classicbox.io import read_pascal_string
 from classicbox.io import read_structure
+from classicbox.io import read_unsigned
 from classicbox.io import sizeof_structure
 from classicbox.io import StructMember
 from classicbox.io import write_pascal_string
@@ -42,9 +43,7 @@ _RESOURCE_TYPE_MEMBERS = [
 ]
 
 _RESOURCE_REFERENCE_MEMBERS = [
-    # TODO: This should be signed.
-    #       Update definition here and the documentation for read_resource_fork().
-    StructMember('id', 'unsigned', 2, None),
+    StructMember('id', 'signed', 2, None),
     StructMember('offset_from_resource_name_list_to_name', 'unsigned', 2, None),
         # -1 if the resource has no name
     StructMember('attributes', 'unsigned', 1, None),
@@ -67,13 +66,23 @@ MAP_CHANGED = 32        # set to write map on update
 
 # ------------------------------------------------------------------------------
 
-def read_resource_fork(input, read_resource_names=True, _verbose=False):
+def read_resource_fork(
+        input,
+        read_all_resource_names=True,
+        read_all_resource_data=False,
+        read_everything=False,
+        _verbose=False):
     """
     Reads a resource fork from the specified input stream, returning a
-    resource map object. Resource data is not read into memory.
+    resource map object. Resource data is not read into memory by default.
     
-    Resource names can be skipped by passing `False` for the
-    `read_resource_names` parameter.
+    All resource names can be skipped by passing `False` for the
+    `read_all_resource_names` parameter. Skipping the names uses less memory.
+    
+    All resource data can be read by passing `True` for the `read_all_resource_data`
+    parameter. This is not recommended unless the resource fork is known
+    to fit into memory completely. Instead, most callers should use
+    read_resource_data() to read individual resources of interest.
     
     A resource map object is a dictionary of the format:
     * resource_types : list<ResourceType>
@@ -85,11 +94,31 @@ def read_resource_fork(input, read_resource_names=True, _verbose=False):
     * resources : list<Resource>
     
     A Resource object is a dictionary of the format:
-    * id : unsigned(2) -- ID of this resource.
-    * name : str-macroman -- Name of this resource. Only available if
-                             `read_resource_names` is `True` (the default).
+    * id : signed(2) -- ID of this resource.
+    * name : str-macroman -- Name of this resource.
+                             Only available if `read_all_resource_names` is
+                             True (the default).
     * attributes : unsigned(1) -- Attributes of this resource. See RES_* constants.
+    * data : str-binary -- Data of this resource.
+                           Only available if `read_all_resource_data` is True.
+    
+    Arguments:
+    * input -- Input stream to read the resource fork from.
+    * read_all_resource_names : bool -- Whether to read all resource names.
+                                        Defaults to True.
+    * read_all_resource_data : bool - Whether to read all resource data.
+                                      Defaults to False.
+    * read_everything : bool -- Convenience argument that implies
+                                `read_all_resource_names` and
+                                `read_all_resource_data` if True.
+                                Defaults to False.
+    
+    Returns a resource map object.
     """
+    
+    if read_everything:
+        read_all_resource_names = True
+        read_all_resource_data = True
     
     # Read resource fork header
     resource_fork_header = read_structure(input, _RESOURCE_FORK_HEADER_MEMBERS)
@@ -147,11 +176,11 @@ def read_resource_fork(input, read_resource_names=True, _verbose=False):
     resource_map = resource_map_header
     
     # Record useful information in the resource map structure
-    resource_map['absolute_offset'] = resource_map_absolute_offset
+    resource_map['resource_fork_header'] = resource_fork_header
     resource_map['resource_types'] = resource_types
     
     # Read resource names if requested
-    if read_resource_names:
+    if read_all_resource_names:
         if _verbose:
             print '######################'
             print '### Resource Names ###'
@@ -171,6 +200,15 @@ def read_resource_fork(input, read_resource_names=True, _verbose=False):
         if _verbose:
             print
     
+    # Read resource data if requested
+    if read_all_resource_data:
+        for type in resource_map['resource_types']:
+            for resource in type['resources']:
+                resource_data = read_resource_data(input, resource_map, resource)
+                
+                # Save the resource name in the resource reference structure
+                resource['data'] = resource_data
+    
     return resource_map
 
 
@@ -187,7 +225,7 @@ def read_resource_name(input, resource_map, resource):
     Reads the name of the specified resource.
     """
     absolute_offset_to_resource_name = (
-        resource_map['absolute_offset'] +
+        resource_map['resource_fork_header']['offset_to_resource_map'] +
         resource_map['offset_to_resource_name_list'] +
         resource['offset_from_resource_name_list_to_name'])
     
@@ -196,7 +234,18 @@ def read_resource_name(input, resource_map, resource):
     return resource_name
 
 
-# TODO: Provide function read_resource_data()
+def read_resource_data(input, resource_map, resource):
+    """
+    Reads the data of the specified resource.
+    """
+    absolute_offset_to_resource_data = (
+        resource_map['resource_fork_header']['offset_to_resource_data_area'] +
+        resource['offset_from_resource_data_area_to_data'])
+    
+    input.seek(absolute_offset_to_resource_data)
+    resource_data_length = read_unsigned(input, 4)
+    resource_data = input.read(resource_data_length)
+    return resource_data
 
 # ------------------------------------------------------------------------------
 

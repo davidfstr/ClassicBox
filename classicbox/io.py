@@ -37,9 +37,18 @@ def read_unsigned(input, num_bytes):
         c = input.read(1)
         if c == '' and i == 0:
             # Special case that read_extras cares about
+            # TODO: Rewrite read_extras to avoid need to pollute this common method
             raise EOFError
         value = value | ord(c)
     return value
+
+
+def read_signed(input, num_bytes):
+    overflow_value = (1 << (8*num_bytes - 1))
+    
+    value = read_unsigned(input, num_bytes)
+    signed_value = value if value < overflow_value else value - overflow_value*2
+    return signed_value
 
 
 def read_pascal_string(input, max_string_length):
@@ -88,6 +97,13 @@ def write_unsigned(output, num_bytes, value):
         mask = mask >> 8
 
 
+def write_signed(output, num_bytes, value):
+    overflow_value = (1 << (8*num_bytes - 1))
+    
+    unsigned_value = value if value >= 0 else value + overflow_value*2
+    write_unsigned(output, num_bytes, unsigned_value)
+
+
 def write_pascal_string(output, max_string_length, value):
     str_length = len(value)
     output.write(chr(str_length))
@@ -114,7 +130,7 @@ def print_structure(structure, members, name):
 def sizeof_structure(members):
     total_size = 0
     for member in members:
-        if member.type not in ('unsigned', 'fixed_string'):
+        if member.type not in ('unsigned', 'signed', 'fixed_string'):
             raise ValueError('Don\'t know how to find the size of member of type: %s' % member.type)
         sizeof_member = member.subtype
         
