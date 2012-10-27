@@ -4,9 +4,9 @@
 Manipulates MacBinary files.
 """
 
-from classicbox.io import _StructMember
 from classicbox.io import print_structure
 from classicbox.io import read_structure
+from classicbox.io import StructMember
 import sys
 
 
@@ -14,32 +14,32 @@ _VERBOSE_HEADER_FORMAT = False
 
 # MacBinary format reference: http://code.google.com/p/theunarchiver/wiki/MacBinarySpecs
 _MACBINARY_HEADER_MEMBERS = [
-    _StructMember('old_version', 'unsigned', 1, 0),
-    _StructMember('filename', 'pascal_string', 63, None),
-    _StructMember('file_type', 'fixed_string', 4, None),
-    _StructMember('file_creator', 'fixed_string', 4, None),
-    _StructMember('finder_flags', 'unsigned', 1, None),
-    _StructMember('zero_1', 'unsigned', 1, 0),
-    _StructMember('y_position', 'unsigned', 2, None),
-    _StructMember('x_position', 'unsigned', 2, None),
-    _StructMember('parent_directory_id', 'unsigned', 2, None),
-    _StructMember('protected', 'unsigned', 1, None),
-    _StructMember('zero_2', 'unsigned', 1, 0),
-    _StructMember('data_fork_length', 'unsigned', 4, None),
-    _StructMember('resource_fork_length', 'unsigned', 4, None),
-    _StructMember('created', 'unsigned', 4, None),
-    _StructMember('modified', 'unsigned', 4, None),
-    _StructMember('comment_length', 'unsigned', 2, None),
-    _StructMember('extra_finder_flags', 'unsigned', 1, None),
-    _StructMember('signature', 'fixed_string', 4, 'mBIN'),
-    _StructMember('filename_script', 'unsigned', 1, None),
-    _StructMember('extended_finder_flags', 'unsigned', 1, None),
-    _StructMember('reserved', 'fixed_string', 8, 0),
-    _StructMember('reserved_for_unpacked_size', 'unsigned', 4, 0),
-    _StructMember('reserved_for_second_header_length', 'unsigned', 2, 0),
-    _StructMember('version', 'unsigned', 1, 130),
-    _StructMember('min_version_to_read', 'unsigned', 1, 129),
-    _StructMember('header_crc', 'unsigned', 2, None),
+    StructMember('old_version', 'unsigned', 1, 0),
+    StructMember('filename', 'pascal_string', 63, None),
+    StructMember('file_type', 'fixed_string', 4, None),
+    StructMember('file_creator', 'fixed_string', 4, None),
+    StructMember('finder_flags', 'unsigned', 1, None),
+    StructMember('zero_1', 'unsigned', 1, 0),
+    StructMember('y_position', 'unsigned', 2, None),
+    StructMember('x_position', 'unsigned', 2, None),
+    StructMember('parent_directory_id', 'unsigned', 2, None),
+    StructMember('protected', 'unsigned', 1, None),
+    StructMember('zero_2', 'unsigned', 1, 0),
+    StructMember('data_fork_length', 'unsigned', 4, None),
+    StructMember('resource_fork_length', 'unsigned', 4, None),
+    StructMember('created', 'unsigned', 4, None),
+    StructMember('modified', 'unsigned', 4, None),
+    StructMember('comment_length', 'unsigned', 2, None),
+    StructMember('extra_finder_flags', 'unsigned', 1, None),
+    StructMember('signature', 'fixed_string', 4, 'mBIN'),
+    StructMember('filename_script', 'unsigned', 1, None),
+    StructMember('extended_finder_flags', 'unsigned', 1, None),
+    StructMember('reserved', 'fixed_string', 8, 0),
+    StructMember('reserved_for_unpacked_size', 'unsigned', 4, 0),
+    StructMember('reserved_for_second_header_length', 'unsigned', 2, 0),
+    StructMember('version', 'unsigned', 1, 130),
+    StructMember('min_version_to_read', 'unsigned', 1, 129),
+    StructMember('header_crc', 'unsigned', 2, None),
 ]
 
 # ------------------------------------------------------------------------------

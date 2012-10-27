@@ -2,54 +2,54 @@
 Manipulates MacOS resource forks.
 """
 
-from classicbox.io import _StructMember
 from classicbox.io import print_structure
 from classicbox.io import read_pascal_string
 from classicbox.io import read_structure
 from classicbox.io import sizeof_structure
+from classicbox.io import StructMember
 from classicbox.io import write_pascal_string
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 
 
 _RESOURCE_FORK_HEADER_MEMBERS = [
-    _StructMember('offset_to_resource_data_area', 'unsigned', 4, None),
-    _StructMember('offset_to_resource_map', 'unsigned', 4, None),
-    _StructMember('resource_data_area_length', 'unsigned', 4, None),
-    _StructMember('resource_map_length', 'unsigned', 4, None),
+    StructMember('offset_to_resource_data_area', 'unsigned', 4, None),
+    StructMember('offset_to_resource_map', 'unsigned', 4, None),
+    StructMember('resource_data_area_length', 'unsigned', 4, None),
+    StructMember('resource_map_length', 'unsigned', 4, None),
     
     # The format of this member is undocumented. If omitted, ResEdit will
     # complain that the resulting resource fork is damaged. Reserving the
     # appropriate amount of space and filling it with zeros seems to make
     # ResEdit happy.
-    _StructMember('reserved_for_system_use', 'fixed_string', 256 - 16, 0),
+    StructMember('reserved_for_system_use', 'fixed_string', 256 - 16, 0),
 ]
 
 _RESOURCE_MAP_HEADER_MEMBERS = [
-    _StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, 0),
-    _StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, 0),
-    _StructMember('reserved_for_file_reference_number', 'unsigned', 2, 0),
-    _StructMember('attributes', 'unsigned', 2, None),
-    _StructMember('offset_to_resource_type_list', 'unsigned', 2, None),
-    _StructMember('offset_to_resource_name_list', 'unsigned', 2, None),
-    _StructMember('resource_type_count_minus_one', 'unsigned', 2, None),
+    StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, 0),
+    StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, 0),
+    StructMember('reserved_for_file_reference_number', 'unsigned', 2, 0),
+    StructMember('attributes', 'unsigned', 2, None),
+    StructMember('offset_to_resource_type_list', 'unsigned', 2, None),
+    StructMember('offset_to_resource_name_list', 'unsigned', 2, None),
+    StructMember('resource_type_count_minus_one', 'unsigned', 2, None),
 ]
 
 _RESOURCE_TYPE_MEMBERS = [
-    _StructMember('code', 'fixed_string', 4, None),
-    _StructMember('resource_count_minus_one', 'unsigned', 2, None),
-    _StructMember('offset_from_resource_type_list_to_reference_list', 'unsigned', 2, None),
+    StructMember('code', 'fixed_string', 4, None),
+    StructMember('resource_count_minus_one', 'unsigned', 2, None),
+    StructMember('offset_from_resource_type_list_to_reference_list', 'unsigned', 2, None),
 ]
 
 _RESOURCE_REFERENCE_MEMBERS = [
     # TODO: This should be signed.
     #       Update definition here and the documentation for read_resource_fork().
-    _StructMember('id', 'unsigned', 2, None),
-    _StructMember('offset_from_resource_name_list_to_name', 'unsigned', 2, None),
+    StructMember('id', 'unsigned', 2, None),
+    StructMember('offset_from_resource_name_list_to_name', 'unsigned', 2, None),
         # -1 if the resource has no name
-    _StructMember('attributes', 'unsigned', 1, None),
-    _StructMember('offset_from_resource_data_area_to_data', 'unsigned', 3, None),
-    _StructMember('reserved_for_handle', 'unsigned', 4, 0),
+    StructMember('attributes', 'unsigned', 1, None),
+    StructMember('offset_from_resource_data_area_to_data', 'unsigned', 3, None),
+    StructMember('reserved_for_handle', 'unsigned', 4, 0),
 ]
 
 # Resource Attributes

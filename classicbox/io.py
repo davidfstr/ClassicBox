@@ -5,9 +5,8 @@ Reads and writes binary data from structures and streams.
 from collections import namedtuple
 
 
-# TODO: Rename as public
-_StructMember = namedtuple(
-    '_StructMember',
+StructMember = namedtuple(
+    'StructMember',
     ('name', 'type', 'subtype', 'default_value'))
 
 # ------------------------------------------------------------------------------
