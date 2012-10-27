@@ -35,22 +35,22 @@ def main(args):
     force = (len(args) >= 1 and args[0] == '-f')
     if force:
         args = args[1:]
-    output_alias_resource_fork_file = args.pop(0)
+    output_alias_resource_fork_filepath = args.pop(0)
     
     # Don't let the user inadvertently clobber an existing file
-    if not force and os.path.exists(output_alias_resource_fork_file):
-        sys.exit('File exists: %s' % output_alias_resource_fork_file)
+    if not force and os.path.exists(output_alias_resource_fork_filepath):
+        sys.exit('File exists: %s' % output_alias_resource_fork_filepath)
         return
     
     if command == 'write_fixed':
-        write_fixed_alias_resource_fork_file(output_alias_resource_fork_file)
+        write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath)
     elif command == 'write_targeted':
-        write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, args)
+        write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath, args)
     else:
         sys.exit('Unknown command: %s' % command)
         return
 
-def write_fixed_alias_resource_fork_file(output_alias_resource_fork_file):
+def write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath):
     """
     Writes a fixed alias resource fork file to disk.
     """
@@ -78,7 +78,7 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_file):
         ])
     alis_resource_contents = alis_resource_contents_output.getvalue()
     
-    with open(output_alias_resource_fork_file, 'wb') as resource_fork_output:
+    with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
         write_resource_fork(resource_fork_output, {
             'attributes': 0,
             'resource_types': [
@@ -97,7 +97,7 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_file):
         })
 
 
-def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, args):
+def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath, args):
     """
     Writes an alias resource fork file that targets a particular
     item in an HFS disk image.
@@ -106,10 +106,10 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, arg
     # Parse arguments
     (disk_image_filepath, target_macitempath) = args
     
-    volume_info = hfs_mount(disk_image_filepath)
-    
+    # Normalize target path
     target_macitempath = hfspath_normpath(target_macitempath)
-    target_is_volume = target_macitempath.endswith(':')
+    
+    volume_info = hfs_mount(disk_image_filepath)
     
     target_item_info = hfs_stat(target_macitempath)
     
@@ -120,6 +120,7 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, arg
         attributes=0
     )
     
+    target_is_volume = target_macitempath.endswith(':')
     if target_is_volume:
         # Target is volume
         alias_record = dict(
@@ -252,11 +253,33 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, arg
     # (2) alias_resource_info
     # (3) alias_file_info
     
+    # Serialize alias record
+    alis_resource_contents_output = StringIO()
+    write_alias_record(alis_resource_contents_output, **alias_record)
+    alis_resource_contents = alis_resource_contents_output.getvalue()
+    
     # Display the resulting alias record
     fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
     print_alias_record(alias_record)
     
-    # TODO: Write to file: output_alias_resource_fork_file
+    # Write alias file resource fork
+    with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
+        write_resource_fork(resource_fork_output, {
+            'attributes': 0,
+            'resource_types': [
+                {
+                    'code': alias_resource_info['type'],
+                    'resources': [
+                        {
+                            'id': alias_resource_info['id'],
+                            'name': alias_resource_info['name'],
+                            'attributes': alias_resource_info['attributes'],
+                            'data': alis_resource_contents
+                        }
+                    ]
+                }
+            ]
+        })
 
 
 def _create_standard_extras_list(parent_dir_info, ancestor_dir_infos, target_macitempath):
