@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
 """
-Manipulates MacOS alias files.
+Writes MacOS alias files.
 """
 
-# TODO: Extract common methods to classicbox.alias.
-from alias_record import _ALIAS_RECORD_MEMBERS
-from alias_record import Extra
-from alias_record import print_alias_record
-from alias_record import write_alias_record
-
+# TODO: Avoid need to import private member _ALIAS_RECORD_MEMBERS
+from classicbox.alias.record import _ALIAS_RECORD_MEMBERS
+from classicbox.alias.record import Extra
+from classicbox.alias.record import print_alias_record
+from classicbox.alias.record import write_alias_record
 from classicbox.disk.hfs import hfs_mount
 from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
