@@ -126,7 +126,7 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, arg
             alias_kind=1,                           # 1 = directory
             volume_name=volume_info['name'],
             volume_created=volume_info['created'],
-            parent_directory_id=1,                  # magic?
+            parent_directory_id=1,                  # special ID for parent of all volumes
             file_name=target_item_info.name,
             file_number=target_item_info.id,
             file_created=volume_info['created'],    # special case
@@ -139,18 +139,26 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_file, arg
             ]
         )
         
+        # A Finder-created alias file to a volume contains a custom icon
+        # {'ICN#', 'ics#', 'SICN'} that matches the volume that it refers to.
+        # 
+        # Here, we are creating an alias file without a custom icon, that will
+        # appear visually as a regular document alias (ick!) but will still work.
+        # Finder will actually add the custom icon to the existing alias file
+        # when the user attempts to open the file.
+        # 
+        # If it is desired to add the custom icon in the future, it is important
+        # to include the USE_CUSTOM_ICON flag for the alias file (in addition
+        # to ALIAS and INITED).
         alias_file_info = dict(
             alias_file_type='hdsk',
             alias_file_creator='MACS'
-            # NOTE: The alias resource fork contains, in addition to 'alis',
-            #       resources of type {'ICN#', 'ics#', 'SICN'}.
-            #       Hence the USE_CUSTOM_ICON flag here.
-            #       I suspect that omitting the icon won't prevent the alias
-            #       from working, although Finder may draw it oddly.
-            #alias_file_flags=(ALIAS | INITED | USE_CUSTOM_ICON)
+            #alias_file_flags=(ALIAS | INITED)
         )
         
     else:
+        # Target is file or folder
+        
         # Lookup ancestors
         ancestor_infos = []
         cur_ancestor_dirpath = hfspath_dirpath(target_macitempath)
