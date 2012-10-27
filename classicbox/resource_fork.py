@@ -102,6 +102,9 @@ def read_resource_fork(
     * data : str-binary -- Data of this resource.
                            Only available if `read_all_resource_data` is True.
     
+    Other undocumented keys may be present in the above dictionary types.
+    Callers should not rely upon such keys.
+    
     Arguments:
     * input -- Input stream to read the resource fork from.
     * read_all_resource_names : bool -- Whether to read all resource names.
@@ -250,7 +253,25 @@ def read_resource_data(input, resource_map, resource):
 # ------------------------------------------------------------------------------
 
 def write_resource_fork(output, resource_map):
+    """
+    Writes a resource fork to the specified output stream using the specified
+    resource map. All resource names and data must be read into memory.
+    
+    The specified resource map must be in the format documented by
+    `read_resource_fork()`. (It is not necessary for undocumented keys to be
+    present.)
+    """
     resource_types = resource_map['resource_types']
+    
+    # Verify that resource names and data are present
+    for type in resource_types:
+        for resource in type['resources']:
+            if 'name' not in resource:
+                raise ValueError('Missing name for "%s" resource %d.' % (
+                    type.code, resource['id']))
+            if 'data' not in resource:
+                raise ValueError('Missing data for "%s" resource %d.' % (
+                    type.code, resource['id']))
     
     # Compute offsets within the resource data area and resource name list,
     # that resource references refer to
