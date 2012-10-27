@@ -15,32 +15,32 @@ _StructMember = namedtuple(
 
 # Alias file format reference: http://xhelmboyx.tripod.com/formats/alias-layout.txt
 _ALIAS_RECORD_MEMBERS = [
-    _StructMember('user_type_name',         'fixed_string', 4,  0),     # 0 = none
-    _StructMember('record_size',            'unsigned', 2,      None),
-    _StructMember('record_version',         'unsigned', 2,      2),     # 2 = current version
-    _StructMember('alias_kind',             'unsigned', 2,      None),  # 0 = file, 1 = directory
-    _StructMember('volume_name',            'pascal_string', 27, None),
-    _StructMember('volume_created',         'unsigned', 4,      0),     # may be 0; seconds since 1904
-    _StructMember('volume_signature',       'fixed_string', 2,  'BD'),  # 'RW' = MFS, 'BD' = HFS (or foreign), 'H+' = HFS+
-    _StructMember('drive_type',             'unsigned', 2,      0),
+    _StructMember('user_type_name', 'fixed_string', 4, 0),      # 0 = none
+    _StructMember('record_size', 'unsigned', 2, None),
+    _StructMember('record_version', 'unsigned', 2, 2),          # 2 = current version
+    _StructMember('alias_kind', 'unsigned', 2, None),           # 0 = file, 1 = directory
+    _StructMember('volume_name', 'pascal_string', 27, None),
+    _StructMember('volume_created', 'unsigned', 4, 0),          # may be 0; seconds since 1904
+    _StructMember('volume_signature', 'fixed_string', 2, 'BD'), # 'RW' = MFS, 'BD' = HFS (or foreign), 'H+' = HFS+
+    _StructMember('drive_type', 'unsigned', 2, 0),
         # 0 = Fixed HD, 1 = Network Disk,
         # 2 = 400kB FD, 3 = 800kB FD,
         # 4 = 1.4MB FD, 5 = Other Ejectable Media
-    _StructMember('parent_directory_id',    'unsigned', 4,      0),     # may be 0
-    _StructMember('file_name',              'pascal_string', 63, None),
-    _StructMember('file_number',            'unsigned', 4,      0),     # may be 0
-    _StructMember('file_created',           'unsigned', 4,      0),     # may be 0; seconds since 1904
-    _StructMember('file_type',              'fixed_string', 4,  0),     # may be 0
-    _StructMember('file_creator',           'fixed_string', 4,  0),     # may be 0
-    _StructMember('nlvl_from',              'unsigned', 2,      None),
-    _StructMember('nlvl_to',                'unsigned', 2,      None),
+    _StructMember('parent_directory_id', 'unsigned', 4, 0),     # may be 0
+    _StructMember('file_name', 'pascal_string', 63, None),
+    _StructMember('file_number', 'unsigned', 4, 0),             # may be 0
+    _StructMember('file_created', 'unsigned', 4, 0),            # may be 0; seconds since 1904
+    _StructMember('file_type', 'fixed_string', 4, 0),           # may be 0
+    _StructMember('file_creator', 'fixed_string', 4, 0),        # may be 0
+    _StructMember('nlvl_from', 'unsigned', 2, None),
+    _StructMember('nlvl_to', 'unsigned', 2, None),
         # -1 = alias on different volume,
         # 1 = alias and target in same directory
-    _StructMember('volume_attributes',      'unsigned', 4,      0),     # may be 0
-    _StructMember('volume_filesystem_id',   'fixed_string', 2,  0),     # 0 for MFS or HFS
-    _StructMember('reserved',               'fixed_string', 10, 0),
-    _StructMember('extras',                 'extras', None,     []),
-    _StructMember('trailing',               'until_eof', None,  ''),
+    _StructMember('volume_attributes', 'unsigned', 4, 0),       # may be 0
+    _StructMember('volume_filesystem_id', 'fixed_string', 2, 0),# 0 for MFS or HFS
+    _StructMember('reserved', 'fixed_string', 10, 0),
+    _StructMember('extras', 'extras', None, []),
+    _StructMember('trailing', 'until_eof', None, ''),
 ]
 
 _ExtraType = namedtuple(
