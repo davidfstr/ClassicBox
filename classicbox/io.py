@@ -12,6 +12,16 @@ _StructMember = namedtuple(
 
 # ------------------------------------------------------------------------------
 
+def print_structure(structure, members, name):
+    print name
+    print '=' * len(name)
+    for member in members:
+        value = structure[member.name]
+        print '%s: %s' % (member.name, repr(value))
+    print
+
+# ------------------------------------------------------------------------------
+
 def read_structure(input, structure_members, external_readers=None):
     v = {}
     this_module = globals()

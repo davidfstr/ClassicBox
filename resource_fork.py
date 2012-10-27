@@ -5,6 +5,7 @@ Reads resource forks.
 """
 
 from classicbox.io import _StructMember
+from classicbox.io import print_structure
 from classicbox.io import read_pascal_string
 from classicbox.io import read_structure
 import sys
@@ -133,15 +134,6 @@ def main(args):
             
             if VERBOSE:
                 print
-
-
-def print_structure(structure, members, name):
-    print name
-    print '=' * len(name)
-    for member in members:
-        value = structure[member.name]
-        print '%s: %s' % (member.name, repr(value))
-    print
 
 # ------------------------------------------------------------------------------
 
