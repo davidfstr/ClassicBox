@@ -296,7 +296,7 @@ def write_resource_fork(output, resource_map):
 
 
 def _write_resource_fork_header(output, resource_fork_header):
-    write_structure(output, _RESOURCE_FORK_HEADER_MEMBERS, **resource_fork_header)
+    write_structure(output, _RESOURCE_FORK_HEADER_MEMBERS, resource_fork_header)
 
 
 def _write_resource_data_area_using_map(output, resource_map):
@@ -331,12 +331,12 @@ def _write_resource_map(output, resource_map):
 
 
 def _write_resource_map_header(output, resource_map_header):
-    write_structure(output, _RESOURCE_MAP_HEADER_MEMBERS, **resource_map_header)
+    write_structure(output, _RESOURCE_MAP_HEADER_MEMBERS, resource_map_header)
 
 
 def _write_resource_type(output, resource_type):
-    write_structure(output, _RESOURCE_TYPE_MEMBERS, **resource_type)
+    write_structure(output, _RESOURCE_TYPE_MEMBERS, resource_type)
 
 
 def _write_resource_reference(output, resource_reference):
-    write_structure(output, _RESOURCE_REFERENCE_MEMBERS, **resource_reference)
+    write_structure(output, _RESOURCE_REFERENCE_MEMBERS, resource_reference)

@@ -130,16 +130,15 @@ def _read_unknown_extra_content(extra_content):
 
 # ------------------------------------------------------------------------------
 
-# TODO: Don't use kwargs. Just a plain dictionary will do.
-def write_alias_record(output, **fieldargs):
-    if 'record_size' in fieldargs:
-        _write_alias_record_structure(output, fieldargs)
+def write_alias_record(output, alias_record):
+    if 'record_size' in alias_record:
+        _write_alias_record_structure(output, alias_record)
     else:
-        fieldargs['record_size'] = 0
+        alias_record['record_size'] = 0
         
         # Write record, except for the 'record_size' field
         start_offset = output.tell()
-        _write_alias_record_structure(output, fieldargs)
+        _write_alias_record_structure(output, alias_record)
         end_offset = output.tell()
         
         # Write the 'record_size' field
@@ -150,9 +149,9 @@ def write_alias_record(output, **fieldargs):
 
 
 def _write_alias_record_structure(output, alias_record):
-    write_structure(output, _ALIAS_RECORD_MEMBERS, external_writers={
+    write_structure(output, _ALIAS_RECORD_MEMBERS, alias_record, external_writers={
         'write_extras': _write_extras
-    }, **alias_record)
+    })
 
 
 def _write_extras(output, ignored, value):

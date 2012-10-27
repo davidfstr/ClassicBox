@@ -55,8 +55,7 @@ def read_until_eof(input, ignored):
 
 # ------------------------------------------------------------------------------
 
-# TODO: Don't use kwargs. Just a plain dictionary ('structure') will do.
-def write_structure(output, structure_members, external_writers=None, **fieldargs):
+def write_structure(output, structure_members, structure, external_writers=None):
     this_module = globals()
     for member in structure_members:
         member_writer_name = 'write_' + member.type
@@ -64,7 +63,7 @@ def write_structure(output, structure_members, external_writers=None, **fieldarg
             this_module.get(member_writer_name, None) or
             external_writers[member_writer_name])
         
-        value = fieldargs.get(member.name, member.default_value)
+        value = structure.get(member.name, member.default_value)
         if value is None:
             raise ValueError('No value specified for member "%s", which lacks a default value.' % member.name)
         

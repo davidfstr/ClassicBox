@@ -49,7 +49,7 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath):
     
     # "AppAlias.rsrc.dat"
     alis_resource_contents_output = StringIO()
-    write_alias_record(alis_resource_contents_output, **{
+    write_alias_record(alis_resource_contents_output, {
         'alias_kind': 0,
         'volume_name': 'Boot',
         'volume_created': 3431272487,
@@ -108,7 +108,7 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath,
     
     # Serialize alias record
     alis_resource_contents_output = StringIO()
-    write_alias_record(alis_resource_contents_output, **alias_record)
+    write_alias_record(alis_resource_contents_output, alias_record)
     alis_resource_contents = alis_resource_contents_output.getvalue()
     
     # Display the resulting alias record

@@ -26,7 +26,7 @@ def main(args):
         
     elif command == 'test_read_write':
         output = StringIO()
-        write_alias_record(output, **alias_record)
+        write_alias_record(output, alias_record)
         
         verify_matches(output, alias_record_file_filepath, alias_record)
         
@@ -41,7 +41,7 @@ def main(args):
 def test_write_custom_matching(alias_record_file_filepath, alias_record):
     # "AppAlias.rsrc.dat"
     output = StringIO()
-    write_alias_record(output,
+    write_alias_record(output, dict(
         record_size=202,
         alias_kind=0,
         volume_name='Boot',
@@ -60,12 +60,13 @@ def test_write_custom_matching(alias_record_file_filepath, alias_record):
             Extra(1, 'directory_ids', [542, 541, 484]),
             Extra(2, 'absolute_path', 'Boot:AutQuit7:A:B:app'),
             Extra(0xFFFF, 'end', None)
-        ])
+        ]
+    ))
     
     """
     # "AutQuit7 Alias Data.rsrc.dat"
     output = StringIO()
-    write_alias_record(output,
+    write_alias_record(output, dict(
         record_size=200,
         alias_kind=0,
         volume_name='Boot',
@@ -84,7 +85,8 @@ def test_write_custom_matching(alias_record_file_filepath, alias_record):
             Extra(1, 'directory_ids', [484]),
             Extra(2, 'absolute_path', 'Boot:AutQuit7:AutQuit7'),
             Extra(0xFFFF, 'end', None)
-        ])
+        ]
+    ))
     """
     
     verify_matches(output, alias_record_file_filepath, alias_record)
