@@ -5,6 +5,9 @@ Support for HFS Extended (HFS+) disk images may be added in the future.
 Support for MFS disk images may be added in the future.
 """
 
+from __future__ import absolute_import
+
+from classicbox.time import convert_ctime_string_to_mac_timestamp
 from classicbox.util import DEVNULL
 from collections import namedtuple
 import os
@@ -66,13 +69,13 @@ def hfs_mount(disk_image_filepath):
         if matcher is not None:
             ctime_string = matcher.group(1)     # str-ascii
             volume_info['created_ctime'] = ctime_string
-            volume_info['created'] = _convert_ctime_to_mac_timestamp(ctime_string)
+            volume_info['created'] = convert_ctime_string_to_mac_timestamp(ctime_string)
         
         matcher = _HMOUNT_MODIFIED_RE.match(line)
         if matcher is not None:
             ctime_string = matcher.group(1)     # str-ascii
             volume_info['modified_ctime'] = ctime_string
-            volume_info['modified'] = _convert_ctime_to_mac_timestamp(ctime_string)
+            volume_info['modified'] = convert_ctime_string_to_mac_timestamp(ctime_string)
         
         matcher = _HMOUNT_BYTES_FREE_RE.match(line)
         if matcher is not None:
@@ -80,51 +83,6 @@ def hfs_mount(disk_image_filepath):
             volume_info['bytes_free'] = bytes_free
     
     return volume_info
-
-
-# Year 1904, minus 1 hour (3600) -- maybe a Daylight Savings Time error?
-# 
-# FIXME: It seems likely that my time conversion computations are inadvertently
-#        being affected by the current computer's locale settings.
-#        
-#        Make sure I am reversing the conversion logic done by hfsutil's
-#        d_ltime() and d_mtime() appropriately.
-_EMPIRICAL_MAC_EPOCH_TIMESTAMP = -2082819600
-
-if __debug__:
-    # (from hdir command emitting a volume creation date)
-    _input_ctime_string = 'Sun Sep 23 19:14:47 2012'
-    _expected_unix_timestamp = 1348452887
-    # (from MacOS alias referencing the same volume's creation date)
-    _expected_output_mac_timestamp = 3431272487
-    
-    _actual_unix_timestamp = int(time.mktime(time.strptime(_input_ctime_string)))
-    if _actual_unix_timestamp != _expected_unix_timestamp:
-        raise AssertionError(
-            'mktime() is giving back different results than before. ' +
-            'Is your mktime() implementation taking your current timezone ' +
-            'or DST status into account when computing results?')
-    
-    _computed_empirical_mac_epoch_timestamp = (
-        _actual_unix_timestamp -
-        _expected_output_mac_timestamp
-    )
-    if _EMPIRICAL_MAC_EPOCH_TIMESTAMP != _computed_empirical_mac_epoch_timestamp:
-        raise AssertionError(
-            'The computed Mac time epoch changed! ' +
-            'Is your mktime() implementation taking your current timezone ' +
-            'or DST status into account when computing results?')
-
-def _convert_ctime_to_mac_timestamp(ctime_string):
-    """
-    Converts a ctime string (such as 'Sun Sep 23 19:14:47 2012') to a
-    Mac timestamp, which is the number of seconds since Jan 1, 1904.
-    
-    Local time is assumed, as opposed to UTC time.
-    """
-    unix_timestamp = int(time.mktime(time.strptime(ctime_string)))
-    mac_timestamp = unix_timestamp - _EMPIRICAL_MAC_EPOCH_TIMESTAMP
-    return mac_timestamp
 
 
 def hfs_pwd():
