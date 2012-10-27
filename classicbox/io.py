@@ -12,16 +12,6 @@ _StructMember = namedtuple(
 
 # ------------------------------------------------------------------------------
 
-def print_structure(structure, members, name):
-    print name
-    print '=' * len(name)
-    for member in members:
-        value = structure[member.name]
-        print '%s: %s' % (member.name, repr(value))
-    print
-
-# ------------------------------------------------------------------------------
-
 def read_structure(input, structure_members, external_readers=None):
     v = {}
     this_module = globals()
@@ -111,3 +101,31 @@ def write_pascal_string(output, max_string_length, value):
 
 def write_until_eof(output, ignored, value):
     output.write(value)
+
+# ------------------------------------------------------------------------------
+
+def print_structure(structure, members, name):
+    print name
+    print '=' * len(name)
+    for member in members:
+        value = structure[member.name]
+        print '%s: %s' % (member.name, repr(value))
+    print
+
+
+def sizeof_structure(members):
+    total_size = 0
+    for member in members:
+        if member.type not in ('unsigned', 'fixed_string'):
+            raise ValueError('Don\'t know how to find the size of member of type: %s' % member.type)
+        sizeof_member = member.subtype
+        
+        total_size += sizeof_member
+    
+    return total_size
+
+
+def fill_missing_structure_members_with_defaults(structure_members, structure):
+    for member in structure_members:
+        if member.name not in structure:
+            structure[member.name] = member.default_value
