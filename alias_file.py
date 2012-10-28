@@ -4,11 +4,6 @@
 Writes MacOS alias files.
 """
 
-# TODO: Extract common methods to classicbox.macbinary
-from macbinary_file import FF_HAS_BEEN_INITED
-from macbinary_file import FF_IS_ALIAS
-from macbinary_file import write_macbinary
-
 # TODO: Avoid need to import private member _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import Extra
@@ -20,6 +15,9 @@ from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
 from classicbox.disk.hfs import hfspath_normpath
 from classicbox.io import fill_missing_structure_members_with_defaults
+from classicbox.macbinary import FF_HAS_BEEN_INITED
+from classicbox.macbinary import FF_IS_ALIAS
+from classicbox.macbinary import write_macbinary
 from classicbox.resource_fork import write_resource_fork
 from StringIO import StringIO
 import os.path
