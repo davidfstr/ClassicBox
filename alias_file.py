@@ -4,6 +4,10 @@
 Writes MacOS alias files.
 """
 
+# TODO: Extract common methods to classicbox.macbinary
+from macbinary_file import FF_HAS_BEEN_INITED
+from macbinary_file import FF_IS_ALIAS
+
 # TODO: Avoid need to import private member _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import Extra
@@ -134,6 +138,7 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath,
             ]
         })
 
+# ------------------------------------------------------------------------------
 
 def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitempath):
     """
@@ -158,25 +163,33 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         'attributes': 0
     }
     
+    alias_record = {
+        'volume_name': volume_info['name'],
+        'volume_created': volume_info['created'],
+        'file_name': target_item_info.name,
+        'file_number': target_item_info.id,
+        # NOTE: Can't get file_created from hfsutil CLI. It outputs a date,
+        #       but not with sufficient precision to compute the Mac timestamp.
+        'file_created': 0,
+        'nlvl_from': 1,             # assume alias file on same volume as target
+        'nlvl_to': 1,               # assume alias file on same volume as target
+    }
+    
     target_is_volume = target_macitempath.endswith(':')
     if target_is_volume:
         # Target is volume
-        alias_record = {
-            'alias_kind': 1,                           # 1 = directory
-            'volume_name': volume_info['name'],
-            'volume_created': volume_info['created'],
-            'parent_directory_id': 1,                  # special ID for parent of all volumes
-            'file_name': target_item_info.name,
-            'file_number': target_item_info.id,
+        alias_record.update({
+            'alias_kind': 1,            # 1 = directory
+            'parent_directory_id': 1,   # special ID for parent of all volumes
             'file_created': volume_info['created'],    # special case
-            'file_type': 0,    # random junk in native MacOS implementation
-            'file_creator': 0, # random junk in native MacOS implementation
-            'nlvl_from': 0xFFFF,   # assume alias file on different volume from target
-            'nlvl_to': 0xFFFF,     # assume alias file on different volume from target
+            'file_type': 0,         # random junk in native MacOS implementation
+            'file_creator': 0,      # random junk in native MacOS implementation
+            'nlvl_from': 0xFFFF,    # assume alias file on different volume from target
+            'nlvl_to': 0xFFFF,      # assume alias file on different volume from target
             'extras': [
                 Extra(0xFFFF, 'end', None)
             ]
-        }
+        })
         
         # A Finder-created alias file to a volume contains a custom icon
         # {'ICN#', 'ics#', 'SICN'} that matches the volume that it refers to.
@@ -187,12 +200,12 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         # when the user attempts to open the file.
         # 
         # If it is desired to add the custom icon in the future, it is important
-        # to include the USE_CUSTOM_ICON flag for the alias file (in addition
-        # to ALIAS and INITED).
+        # to include the FF_HAS_CUSTOM_ICON flag for the alias file
+        # (in addition to FF_IS_ALIAS).
         alias_file_info = {
             'alias_file_type': 'hdsk',
-            'alias_file_creator': 'MACS'
-            #'alias_file_flags': (ALIAS | INITED)
+            'alias_file_creator': 'MACS',
+            'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
         }
         
     else:
@@ -208,86 +221,53 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         parent_dir_info = ancestor_infos[0]         # possibly a volume
         ancestor_dir_infos = ancestor_infos[:-1]    # exclude volume
         
+        alias_record.update({
+            'parent_directory_id': parent_dir_info.id,
+            'extras': _create_standard_extras_list(
+                parent_dir_info, ancestor_dir_infos, target_macitempath)
+        })
+        
         if target_item_info.is_file:
             # Target is file
-            alias_record = {
-                'alias_kind': 0,                       # 0 = file
-                'volume_name': volume_info['name'],
-                'volume_created': volume_info['created'],
-                'parent_directory_id': parent_dir_info.id,
-                'file_name': target_item_info.name,
-                'file_number': target_item_info.id,
-                # NOTE: Can't get file_created reliably from hfsutil CLI
-                'file_created': 0,
+            alias_record.update({
+                'alias_kind': 0,    # 0 = file
                 'file_type': target_item_info.type,
                 'file_creator': target_item_info.creator,
-                'nlvl_from': 1,    # assume alias file on same volume as target
-                'nlvl_to': 1,      # assume alias file on same volume as target
-                'extras': _create_standard_extras_list(
-                    parent_dir_info, ancestor_dir_infos, target_macitempath)
-            }
+            })
             
             if target_item_info.type == 'APPL':
                 # Target is application file
                 alias_file_info = {
                     'alias_file_type': 'adrp',
-                    'alias_file_creator': target_item_info.creator
-                    #'alias_file_flags': (ALIAS | INITED)
+                    'alias_file_creator': target_item_info.creator,
+                    'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
                 }
                 
             else:
                 # Target is document file
                 alias_file_info = {
                     'alias_file_type': target_item_info.type,
-                    'alias_file_creator': 'MPS '
-                    #'alias_file_flags': (ALIAS | INITED)
+                    'alias_file_creator': 'MPS ',
+                    'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
                 }
             
         else:
             # Target is folder
-            alias_record = {
-                'alias_kind': 1,                       # 1 = directory
-                'volume_name': volume_info['name'],
-                'volume_created': volume_info['created'],
-                'parent_directory_id': parent_dir_info.id,
-                'file_name': target_item_info.name,
-                'file_number': target_item_info.id,
-                # NOTE: Can't get file_created reliably from hfsutil CLI
-                'file_created': 0,
-                'file_type': 0,    # random junk in native MacOS implementation
-                'file_creator': 0, # random junk in native MacOS implementation
-                'nlvl_from': 1,    # assume alias file on same volume as target
-                'nlvl_to': 1,      # assume alias file on same volume as target
-                'extras': _create_standard_extras_list(
-                    parent_dir_info, ancestor_dir_infos, target_macitempath)
-            }
+            alias_record.update({
+                'alias_kind': 1,    # 1 = directory
+                'file_type': 0,     # random junk in native MacOS implementation
+                'file_creator': 0,  # random junk in native MacOS implementation
+            })
             
             alias_file_info = {
-                # NOTE: Type is 'fasy' if target is the System Folder. <sigh>
+                # NOTE: Various special folders have their own special type
+                #       code. For example 'Boot:System Folder:' is 'fasy',
+                #       and 'Disk:Trash:' is 'trsh'. <sigh>
+                #       For a complete list, see Finder.h in the Carbon headers.
                 'alias_file_type': 'fdrp',
-                'alias_file_creator': 'MACS'
-                #'alias_file_flags': (ALIAS | INITED)
+                'alias_file_creator': 'MACS',
+                'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
             }
-            
-            # Fun trivia! An alias to the Trash has:
-            # 
-            # alias_record:
-            # - 'alias_kind': 1        # 1 = directory
-            # - 'parent_directory_id': <directory id of boot volume>
-            # - 'file_name': 'Trash'
-            # - 'file_number': 224     # a real directory!
-            # - 'file_type': 0
-            # - 'file_creator': 0
-            # - 'nlvl_from': 2         # wut?
-            # - 'nlvl_to': 1           # wut?
-            # - 'extras': [
-            #       Extra(type=0, name='parent_directory_name', value='Boot')
-            #       Extra(type=2, name='absolute_path', value='Boot:Trash')
-            #       Extra(type=65535, name='end', value=None)
-            #   ]
-            # 
-            # alias_file_info:
-            # - (alias_file_type, alias_file_creator) = ('trsh', 'MACS')
     
     return {
         'alias_record': alias_record,

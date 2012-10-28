@@ -91,27 +91,48 @@ SM_UNICODE_SCRIPT = 0x7E
 # Finder Flags -- for the 'finder_flags' field
 # 
 # Taken from MacBinary III documentation.
+# Descriptions taken from Finder.h in the Carbon headers.
 # 
 FF_IS_ALIAS = 1 << 7
+    # (Files only)
 FF_IS_INVISIBLE = 1 << 6
+    # (Files and folders)
 FF_HAS_BUNDLE = 1 << 5
+    # (Files and folders)
+    # Indicates that a file has a BNDL resource.
+    # Indicates that a folder is displayed as a package.
 FF_NAME_LOCKED = 1 << 4
+    # (Files and folders)
 FF_IS_STATIONARY = 1 << 3
+    # (Files only)
 FF_HAS_CUSTOM_ICON = 1 << 2
+    # (Files and folders)
 FF_RESERVED = 1 << 1
 FF_HAS_BEEN_INITED = 1 << 0
+    # (Files only)
+    # Clear if the file contains desktop database resources ('BNDL', 'FREF',
+    # 'open', 'kind'...) that have not been added yet. Set only by the Finder.
 
 # 
 # Finder Extra Flags -- for the `extra_finder_flags` field
 # 
 # Taken from MacBinary III documentation.
+# Descriptions taken from Finder.h in the Carbon headers.
 #
 FFE_HAS_NO_INITS = 1 << 7
+    # (Extensions/Control Panels only)
+    # This file contains no INIT resource.
 FFE_IS_SHARED = 1 << 6
+    # (Applications only)
+    # If clear, the application needs to write to its resource fork, and
+    # therefore cannot be shared on a server
 FFE_REQUIRES_SWITCH_LAUNCH = 1 << 5
+    # (Reserved)
 FFE_COLOR_RESERVED = 1 << 4
 FFE_COLOR = (1 << 3) | (1 << 2) | (1 << 1)
+    # (Files and folders)
 FFE_IS_ON_DESK = 1 << 0
+    # (Files and folders, System 6)
 
 # 
 # MacBinary format reference:
