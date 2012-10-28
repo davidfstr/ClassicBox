@@ -252,7 +252,7 @@ def read_resource_data(input, resource_map, resource):
 
 # ------------------------------------------------------------------------------
 
-def write_resource_fork(output, resource_map):
+def write_resource_fork(output, resource_map, _preserve_order=False):
     """
     Writes a resource fork to the specified output stream using the specified
     resource map. All resource names and data must be read into memory.
@@ -273,26 +273,60 @@ def write_resource_fork(output, resource_map):
                 raise ValueError('Missing data for "%s" resource %d.' % (
                     type.code, resource['id']))
     
-    # Compute offsets within the resource data area and resource name list,
-    # that resource references refer to
-    next_name_offset = 0
+    # Compute ordering of resources in resource data area and name list
+    if not _preserve_order:
+        resources_in_resource_data_area = []
+        resources_in_resource_name_list = []
+        for type in resource_types:
+            for resource in type['resources']:
+                resources_in_resource_data_area.append(resource)
+                resources_in_resource_name_list.append(resource)
+    else:
+        # Compute ordering of resources in resource data area
+        resources_in_resource_data_area = []
+        for type in resource_types:
+            for resource in type['resources']:
+                resources_in_resource_data_area.append((
+                    resource['offset_from_resource_data_area_to_data'],
+                    resource
+                ))
+        resources_in_resource_data_area.sort()
+        resources_in_resource_data_area = (
+            [resource for (_, resource) in resources_in_resource_data_area]
+        )
+        
+        # Compute ordering of resources in resource name list
+        resources_in_resource_name_list = []
+        for type in resource_types:
+            for resource in type['resources']:
+                resources_in_resource_name_list.append((
+                    resource['offset_from_resource_name_list_to_name'],
+                    resource
+                ))
+        resources_in_resource_name_list.sort()
+        resources_in_resource_name_list = (
+            [resource for (_, resource) in resources_in_resource_name_list]
+        )
+    
+    # Compute offsets within the resource data area
     next_data_offset = 0
-    for type in resource_types:
-        for resource in type['resources']:
-            if len(resource['name']) == 0:
-                resource['offset_from_resource_name_list_to_name'] = 0xFFFF
-            else:
-                name_size = 1 + len(resource['name'])
-                
-                resource['offset_from_resource_name_list_to_name'] = next_name_offset
-                next_name_offset += name_size
-            
-            data_size = 4 + len(resource['data'])
-            
-            resource['offset_from_resource_data_area_to_data'] = next_data_offset
-            next_data_offset += data_size
-            
+    for resource in resources_in_resource_data_area:
+        data_size = 4 + len(resource['data'])
+        
+        resource['offset_from_resource_data_area_to_data'] = next_data_offset
+        next_data_offset += data_size
     resource_data_area_length = next_data_offset
+    
+    # Compute offsets within the resource name list
+    next_name_offset = 0
+    for resource in resources_in_resource_name_list:
+        if len(resource['name']) == 0:
+            resource['offset_from_resource_name_list_to_name'] = 0xFFFF
+        else:
+            name_size = 1 + len(resource['name'])
+            
+            resource['offset_from_resource_name_list_to_name'] = next_name_offset
+            next_name_offset += name_size
     resource_name_list_length = next_name_offset
     
     resource_map_header_length = (
@@ -363,25 +397,24 @@ def write_resource_fork(output, resource_map):
     
     # Write everything
     _write_resource_fork_header(output, resource_fork_header)
-    _write_resource_data_area_using_map(output, resource_map)
-    _write_resource_map(output, resource_map)
+    _write_resource_data_area_using_map(output, resource_map, resources_in_resource_data_area)
+    _write_resource_map(output, resource_map, resources_in_resource_name_list)
 
 
 def _write_resource_fork_header(output, resource_fork_header):
     write_structure(output, _RESOURCE_FORK_HEADER_MEMBERS, resource_fork_header)
 
 
-def _write_resource_data_area_using_map(output, resource_map):
-    for type in resource_map['resource_types']:
-        for resource in type['resources']:
-            resource_data = resource['data']
-            resource_data_length = len(resource_data)
-            
-            write_unsigned(output, 4, resource_data_length)
-            output.write(resource_data)
+def _write_resource_data_area_using_map(output, resource_map, resources_in_resource_data_area):
+    for resource in resources_in_resource_data_area:
+        resource_data = resource['data']
+        resource_data_length = len(resource_data)
+        
+        write_unsigned(output, 4, resource_data_length)
+        output.write(resource_data)
 
 
-def _write_resource_map(output, resource_map):
+def _write_resource_map(output, resource_map, resources_in_resource_name_list):
     _write_resource_map_header(output, resource_map)
     
     # Write resource type list
@@ -394,10 +427,9 @@ def _write_resource_map(output, resource_map):
             _write_resource_reference(output, resource)
     
     # Write resource name list
-    for type in resource_map['resource_types']:
-        for resource in type['resources']:
-            write_pascal_string(output, None, resource['name'])
-            # (Consider writing a padding byte if not word-aligned.)
+    for resource in resources_in_resource_name_list:
+        write_pascal_string(output, None, resource['name'])
+        # (Consider writing a padding byte if not word-aligned.)
 
 
 def _write_resource_map_header(output, resource_map_header):

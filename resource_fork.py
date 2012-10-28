@@ -17,10 +17,7 @@ def main(args):
     if command == 'info':
         with open(resource_file_filepath, 'rb') as input:
             # Read and print the contents of the resource map
-            resource_map = read_resource_fork(
-                input,
-                read_all_resource_names=True,
-                _verbose=True)
+            print_resource_fork(input)
     
     elif command == 'test_read_write':
         with open(resource_file_filepath, 'rb') as input:
@@ -29,7 +26,7 @@ def main(args):
                 read_everything=True)
         
         output_fork = StringIO()
-        write_resource_fork(output_fork, original_resource_map)
+        write_resource_fork(output_fork, original_resource_map, _preserve_order=True)
         
         with open(resource_file_filepath, 'rb') as file:
             expected_output = file.read()
@@ -41,6 +38,12 @@ def main(args):
             print '    Expected: ' + repr(expected_output)
             print '    Actual:   ' + repr(actual_output)
             print
+            print ('#' * 32) + ' EXPECTED ' + ('#' * 32)
+            print_resource_fork(StringIO(expected_output))
+            
+            print ('#' * 32) + ' ACTUAL ' + ('#' * 32)
+            print_resource_fork(StringIO(actual_output))
+            
     
     elif command == 'test_read_write_approx':
         with open(resource_file_filepath, 'rb') as input:
@@ -49,6 +52,14 @@ def main(args):
     else:
         sys.exit('Unrecognized command: %s' % command)
         return
+
+
+def print_resource_fork(input_resource_fork_stream):
+    # NOTE: Depends on undocumented argument
+    resource_map = read_resource_fork(
+        input_resource_fork_stream,
+        read_all_resource_names=True,
+        _verbose=True)
 
 
 def test_read_write(input_resource_fork_stream):
