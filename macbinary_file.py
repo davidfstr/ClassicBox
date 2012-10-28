@@ -4,8 +4,11 @@
 Manipulates MacBinary files.
 """
 
+from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
+from classicbox.io import print_structure_format
 from classicbox.io import read_structure
+from classicbox.io import save_stream_position
 from classicbox.io import sizeof_structure_member
 from classicbox.io import StructMember
 from classicbox.io import write_structure
@@ -252,38 +255,6 @@ def print_macbinary(macbinary):
 
 def print_macbinary_header(macbinary_header):
     print_structure(macbinary_header, _MACBINARY_HEADER_MEMBERS, 'MacBinary Header')
-
-# ------------------------------------------------------------------------------
-
-from contextlib import contextmanager
-
-
-# TODO: Update other code to use where sensible
-@contextmanager
-def save_stream_position(stream):
-    original_position = stream.tell()
-    yield
-    stream.seek(original_position)
-
-
-def print_structure_format(members, name):
-    print name
-    print '=' * len(name)
-    offset = 0
-    for member in members:
-        print '%s: %s' % (offset, member.name)
-        offset += sizeof_structure_member(member)
-    print
-
-
-# TODO: Update other code to use where sensible
-def offset_to_structure_member(members, member_name):
-    offset = 0
-    for member in members:
-        if member.name == member_name:
-            return offset
-        offset += sizeof_structure_member(member)
-    raise ValueError('No such member in structure.')
 
 # ------------------------------------------------------------------------------
 

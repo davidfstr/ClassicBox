@@ -3,6 +3,7 @@ Reads and writes binary data from structures and streams.
 """
 
 from collections import namedtuple
+from contextlib import contextmanager
 
 
 StructMember = namedtuple(
@@ -121,6 +122,16 @@ def print_structure(structure, members, name):
     print
 
 
+def print_structure_format(members, name):
+    print name
+    print '=' * len(name)
+    offset = 0
+    for member in members:
+        print '%s: %s' % (offset, member.name)
+        offset += sizeof_structure_member(member)
+    print
+
+
 def sizeof_structure(members):
     total_size = 0
     for member in members:
@@ -140,6 +151,15 @@ def sizeof_structure_member(member):
         raise ValueError('Don\'t know how to find the size of member with type: %s' % member.type)
 
 
+def offset_to_structure_member(members, member_name):
+    offset = 0
+    for member in members:
+        if member.name == member_name:
+            return offset
+        offset += sizeof_structure_member(member)
+    raise ValueError('No such member in structure.')
+
+
 def fill_missing_structure_members_with_defaults(structure_members, structure):
     for member in structure_members:
         if member.name not in structure:
@@ -150,7 +170,13 @@ def at_eof(input):
     """
     Returns whether the specified input stream is at EOF.
     """
-    original_offset = input.tell()
-    at_eof = input.read(1) == ''
-    input.seek(original_offset)
+    with save_stream_position(input):
+        at_eof = input.read(1) == ''
     return at_eof
+
+
+@contextmanager
+def save_stream_position(stream):
+    original_position = stream.tell()
+    yield
+    stream.seek(original_position)
