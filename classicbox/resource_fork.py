@@ -352,15 +352,19 @@ def write_resource_fork(output, resource_map):
             'Cannot serialize resource fork without at least one type.')
     resource_map['resource_type_count_minus_one'] = len(resource_types) - 1
     
+    # Fill in resource fork header
+    # (Allow undocumented key to be missing)
+    resource_fork_header = resource_map.get('resource_fork_header', {})
     resource_fork_header_length = sizeof_structure(_RESOURCE_FORK_HEADER_MEMBERS)
-    
-    # Write everything
-    _write_resource_fork_header(output, {
+    resource_fork_header.update({
         'offset_to_resource_data_area': resource_fork_header_length,
         'offset_to_resource_map': resource_fork_header_length + resource_data_area_length,
         'resource_data_area_length': resource_data_area_length,
         'resource_map_length': resource_map_length,
     })
+    
+    # Write everything
+    _write_resource_fork_header(output, resource_fork_header)
     _write_resource_data_area_using_map(output, resource_map)
     _write_resource_map(output, resource_map)
 

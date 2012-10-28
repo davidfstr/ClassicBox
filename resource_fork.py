@@ -28,22 +28,11 @@ def main(args):
                 input,
                 read_everything=True)
         
-        # Must write to an intermediate "normalized" fork because
-        # `write_resource_fork(read_resource_fork(...))` does not
-        # preserve reserved fields of the resource fork, which are
-        # actually set to non-zero values in real resource forks.
-        normalized_fork = StringIO()
-        write_resource_fork(normalized_fork, original_resource_map)
-        
-        normalized_fork.seek(0)
-        normalized_resource_map = read_resource_fork(
-            normalized_fork,
-            read_everything=True)
-        
         output_fork = StringIO()
-        write_resource_fork(output_fork, normalized_resource_map)
+        write_resource_fork(output_fork, original_resource_map)
         
-        expected_output = normalized_fork.getvalue()
+        with open(resource_file_filepath, 'rb') as file:
+            expected_output = file.read()
         actual_output = output_fork.getvalue()
         
         matches = (actual_output == expected_output)
@@ -53,10 +42,45 @@ def main(args):
             print '    Actual:   ' + repr(actual_output)
             print
     
+    elif command == 'test_read_write_approx':
+        with open(resource_file_filepath, 'rb') as input:
+            test_read_write(input)
+    
     else:
         sys.exit('Unrecognized command: %s' % command)
         return
 
+
+def test_read_write(input_resource_fork_stream):
+    original_resource_map = read_resource_fork(
+        input_resource_fork_stream,
+        read_everything=True)
+    
+    # Must write to an intermediate "normalized" fork because
+    # `write_resource_fork(read_resource_fork(...))` does not
+    # preserve reserved fields of the resource fork, which are
+    # actually set to non-zero values in real resource forks.
+    # TODO: This limitation is dumb.
+    normalized_fork = StringIO()
+    write_resource_fork(normalized_fork, original_resource_map)
+    
+    normalized_fork.seek(0)
+    normalized_resource_map = read_resource_fork(
+        normalized_fork,
+        read_everything=True)
+    
+    output_fork = StringIO()
+    write_resource_fork(output_fork, normalized_resource_map)
+    
+    expected_output = normalized_fork.getvalue()
+    actual_output = output_fork.getvalue()
+    
+    matches = (actual_output == expected_output)
+    print 'Matches? ' + ('yes' if matches else 'no')
+    if not matches:
+        print '    Expected: ' + repr(expected_output)
+        print '    Actual:   ' + repr(actual_output)
+        print
 
 # ------------------------------------------------------------------------------
 
