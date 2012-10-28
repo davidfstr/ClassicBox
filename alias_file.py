@@ -14,6 +14,7 @@ from classicbox.alias.record import _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import Extra
 from classicbox.alias.record import print_alias_record
 from classicbox.alias.record import write_alias_record
+from classicbox.disk.hfs import hfs_copy_in_from_stream
 from classicbox.disk.hfs import hfs_mount
 from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
@@ -49,6 +50,9 @@ def main(args):
     elif command == 'write_targeted_as_macbinary':
         write_targeted_alias(output_alias_resource_fork_filepath, args,
             output_type='macbinary')
+    elif command == 'write_targeted_as_hfs_file':
+        write_targeted_alias(output_alias_resource_fork_filepath, args,
+            output_type='hfs_file')
     else:
         sys.exit('Unknown command: %s' % command)
         return
@@ -153,7 +157,11 @@ def write_targeted_alias(output_filepath, args, output_type):
         return
     
     # Determine alias filename
-    alias_filename = os.path.basename(output_filepath)
+    if output_type == 'hfs_file':
+        # (Not a normal filepath. So we must do our own `basename` ourselves.)
+        alias_filename = output_filepath.rsplit(':', 1)[-1]
+    else:
+        alias_filename = os.path.basename(output_filepath)
     if alias_filename.endswith('.bin'):
         alias_filename = alias_filename[:-len('.bin')]
     
@@ -171,6 +179,19 @@ def write_targeted_alias(output_filepath, args, output_type):
     if output_type == 'macbinary':
         with open(output_filepath, 'wb') as output:
             output.write(macbinary_contents)
+        return
+    
+    if output_type == 'hfs_file':
+        # Parse output path argument
+        (output_disk_image_filepath, output_macfilepath) = \
+            output_filepath.split(':', 1)
+        
+        # Check arguments
+        if not os.path.exists(output_disk_image_filepath):
+            raise ValueError('Disk image file not found: %s' % output_disk_image_filepath)
+        
+        hfs_mount(output_disk_image_filepath)
+        hfs_copy_in_from_stream(StringIO(macbinary_contents), output_macfilepath)
         return
     
     raise ValueError('Unknown output type: %s' % output_type)

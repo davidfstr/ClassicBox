@@ -12,7 +12,9 @@ from classicbox.util import DEVNULL
 from collections import namedtuple
 import os
 import re
+import shutil
 import subprocess
+from tempfile import NamedTemporaryFile
 import time
 
 
@@ -157,6 +159,46 @@ def _parse_hdir_line(line):
     
     raise ValueError('Unable to parse hdir output line: %s' % line)
 
+
+def hfs_copy_in(source_filepath, target_macfilepath):
+    """
+    Copies the specified MacBinary-encoded file from the local filesystem to the
+    mounted HFS volume.
+    
+    Any file already at the target path will be overridden.
+    
+    Arguments:
+    * source_filepath -- Path to a MacBinary-encoded file in the local filesystem.
+    * target_macfilepath -- An absolute MacOS path. Location on the HFS volume
+                            where the file will be copied to.
+    """
+    subprocess.check_call(
+        ['hcopy', '-m', source_filepath, target_macfilepath],
+        stdout=DEVNULL, stderr=DEVNULL)
+
+
+def hfs_copy_in_from_stream(source_stream, target_macfilepath):
+    """
+    Same as `hfs_copy_in()` but copies from a source stream
+    (i.e. a file-like object) instead of from a source file.
+    """
+    temp_file = NamedTemporaryFile(suffix='.bin', mode='wb', delete=False)
+    temp_filepath = temp_file.name
+    try:
+        # Copy stream to local filesystem, since we need an actual file
+        # as the source of the copy
+        try:
+            shutil.copyfileobj(source_stream, temp_file)
+        finally:
+            temp_file.close()
+            
+        # Copy alias file from local filesystem to disk image
+        hfs_copy_in(temp_filepath, target_macfilepath)
+    finally:
+        os.remove(temp_filepath)
+
+# ------------------------------------------------------------------------------
+# HFS Path Manipulation
 
 def hfspath_dirpath(itempath):
     """
