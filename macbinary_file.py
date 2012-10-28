@@ -54,20 +54,7 @@ def main(args):
     with open(macbinary_filepath, 'rb') as input:
         macbinary = read_macbinary(input)
         
-        print_macbinary_header(macbinary['header'])
-        
-        print 'Data Fork'
-        print '========='
-        print repr(macbinary['data_fork'])
-        print
-        print 'Resource Fork'
-        print '============='
-        print repr(macbinary['resource_fork'])
-        print
-        print 'Comment'
-        print '======='
-        print repr(macbinary['comment'])
-        print
+        print_macbinary(macbinary)
 
 # ------------------------------------------------------------------------------
 
@@ -77,12 +64,17 @@ def read_macbinary(input):
     resource_fork = _read_macbinary_section(input, 'resource_fork', macbinary_header)
     comment = _read_macbinary_section(input, 'comment', macbinary_header)
     
-    return {
-        'header': macbinary_header,
+    # Reclassify MacBinary header as MacBinary object
+    macbinary = macbinary_header
+    
+    # Record remaining components in the MacBinary object
+    macbinary.update({
         'data_fork': data_fork,
         'resource_fork': resource_fork,
         'comment': comment,
-    }
+    })
+    
+    return macbinary
 
 
 def _read_macbinary_section(input, section_type, macbinary_header):
@@ -106,6 +98,23 @@ def read_macbinary_header(input):
     return read_structure(input, _MACBINARY_HEADER_MEMBERS)
 
 # ------------------------------------------------------------------------------
+
+def print_macbinary(macbinary):
+    print_macbinary_header(macbinary)
+    
+    print 'Data Fork'
+    print '========='
+    print repr(macbinary['data_fork'])
+    print
+    print 'Resource Fork'
+    print '============='
+    print repr(macbinary['resource_fork'])
+    print
+    print 'Comment'
+    print '======='
+    print repr(macbinary['comment'])
+    print
+
 
 def print_macbinary_header(macbinary_header):
     print_structure(macbinary_header, _MACBINARY_HEADER_MEMBERS, 'MacBinary Header')

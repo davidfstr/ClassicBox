@@ -177,7 +177,7 @@ def read_resource_fork(
         # Save the resource references in the associated resource type structure
         type['resources'] = resource_references
     
-    # Create resource map object with contents of header
+    # Reclassify resource map header as resource map object
     resource_map = resource_map_header
     
     # Record useful information in the resource map structure
