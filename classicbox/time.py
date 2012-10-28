@@ -46,7 +46,7 @@ def convert_local_to_mac_timestamp(ltime):
     
     This function is compatible with d_mtime() from hfsutil 3.2.6.
     """
-    return ltime + _TZDIFF + _TIMEDIFF
+    return int(ltime) + _TZDIFF + _TIMEDIFF
 
 
 def convert_ctime_string_to_mac_timestamp(ctime_string):

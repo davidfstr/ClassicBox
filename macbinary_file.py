@@ -4,6 +4,8 @@
 Manipulates MacBinary files.
 """
 
+from __future__ import absolute_import
+
 from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
 from classicbox.io import print_structure_format
@@ -13,32 +15,145 @@ from classicbox.io import sizeof_structure_member
 from classicbox.io import StructMember
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
+from classicbox.time import convert_local_to_mac_timestamp
 from StringIO import StringIO
 import sys
+import time
 
 
-# MacBinary format reference: http://code.google.com/p/theunarchiver/wiki/MacBinarySpecs
+# 
+# Script Constants -- for the 'filename_script' field
+# 
+# Taken from the Script Manager Reference
+# http://developer.apple.com/legacy/mac/library/documentation/Carbon/reference/Script_Manager/Script_Manager.pdf
+# 
+SM_ROMAN = 0
+    # Specifies the Roman script system.
+SM_JAPANESE = 1
+SM_TRAD_CHINESE = 2
+    # Specifies the traditional Chinese script system.
+SM_KOREAN = 3
+SM_ARABIC = 4
+SM_HEBREW = 5
+SM_GREEK = 6
+SM_CYRILLIC = 7
+SM_R_SYMBOL = 8
+    # Specifies right-to-left symbols. The script code represented by the
+    # constant smRSymbol is available as an alternative to smUninterp, for
+    # representation of special symbols that have a right-to-left line
+    # direction. Note, however, that the script management system provides no
+    # direct support for representation of text with this script code.
+SM_DEVANAGARI = 9
+SM_GURMUKHI = 10
+SM_GUJARATI = 11
+SM_ORIYA = 12
+SM_BENGALI = 13
+SM_TAMIL = 14
+SM_TELUGU = 15
+SM_KANNADA = 16
+    # Specifies the Kannada/Kanarese script system.
+SM_MALAYALAM = 17
+SM_SINHALESE = 18
+SM_BURMESE = 19
+SM_KHMER = 20
+SM_THAI = 21
+SM_LAO = 22
+    # Specifies the Laotian script system.
+SM_GEORGIAN = 23
+SM_ARMENIAN = 24
+SM_SIMP_CHINESE = 25
+    # Specifies the simplified Chinese script system.
+SM_TIBETAN = 26
+SM_MONGOLIAN = 27
+SM_ETHIOPIC = 28
+    # Specifies the Geez/Ethiopic script system.
+    # This constant is the same as smGeez.
+SM_GEEZ = 28
+    # Specifies the Geez/Ethiopic script system.
+SM_CENTRAL_EURO_ROMAN = 29
+    # Used for Czech, Slovak, Polish, Hungarian, Baltic languages.
+SM_VIETNAMESE = 30
+    # Specifies the Extended Roman script system for Vietnamese.
+SM_EXT_ARABIC = 31
+    # Specifies the extended Arabic for Sindhi script system.
+SM_UNINTERP = 32
+    # Uninterpreted symbols. The script code represented by the constant
+    # smUninterp is available for representation of special symbols, such as
+    # items in a tool palette, that must not be considered as part of any actual
+    # script system. For manipulating and drawing such symbols, the smUninterp
+    # constant should be treated as if it indicated the Roman script system
+    # rather than the system script; that is, the default behavior of
+    # uninterpreted symbols should be Roman.
+SM_UNICODE_SCRIPT = 0x7E
+    # The extended script code for full Unicode input.
+
+# 
+# Finder Flags -- for the 'finder_flags' field
+# 
+# Taken from MacBinary III documentation.
+# 
+FF_IS_ALIAS = 1 << 7
+FF_IS_INVISIBLE = 1 << 6
+FF_HAS_BUNDLE = 1 << 5
+FF_NAME_LOCKED = 1 << 4
+FF_IS_STATIONARY = 1 << 3
+FF_HAS_CUSTOM_ICON = 1 << 2
+FF_RESERVED = 1 << 1
+FF_HAS_BEEN_INITED = 1 << 0
+
+# 
+# Finder Extra Flags -- for the `extra_finder_flags` field
+# 
+# Taken from MacBinary III documentation.
+#
+FFE_HAS_NO_INITS = 1 << 7
+FFE_IS_SHARED = 1 << 6
+FFE_REQUIRES_SWITCH_LAUNCH = 1 << 5
+FFE_COLOR_RESERVED = 1 << 4
+FFE_COLOR = (1 << 3) | (1 << 2) | (1 << 1)
+FFE_IS_ON_DESK = 1 << 0
+
+# 
+# MacBinary format reference:
+# http://code.google.com/p/theunarchiver/wiki/MacBinarySpecs
+# 
 _MACBINARY_HEADER_MEMBERS = [
     StructMember('old_version', 'unsigned', 1, 0),
     StructMember('filename', 'pascal_string', 63, None),
     StructMember('file_type', 'fixed_string', 4, None),
     StructMember('file_creator', 'fixed_string', 4, None),
-    StructMember('finder_flags', 'unsigned', 1, None),
+    StructMember('finder_flags', 'unsigned', 1, 0),
+        # Bit 7 - isAlias
+        # Bit 6 - isInvisible
+        # Bit 5 - hasBundle
+        # Bit 4 - nameLocked
+        # Bit 3 - isStationery
+        # Bit 2 - hasCustomIcon
+        # Bit 1 - reserved
+        # Bit 0 - hasBeenInited
     StructMember('zero_1', 'unsigned', 1, 0),
-    StructMember('y_position', 'unsigned', 2, None),
-    StructMember('x_position', 'unsigned', 2, None),
-    StructMember('parent_directory_id', 'unsigned', 2, None),
-    StructMember('protected', 'unsigned', 1, None),
+    StructMember('y_position', 'unsigned', 2, 0),
+    StructMember('x_position', 'unsigned', 2, 0),
+    StructMember('parent_directory_id', 'unsigned', 2, 0),
+    StructMember('protected', 'unsigned', 1, 0),
     StructMember('zero_2', 'unsigned', 1, 0),
     StructMember('data_fork_length', 'unsigned', 4, None),
     StructMember('resource_fork_length', 'unsigned', 4, None),
     StructMember('created', 'unsigned', 4, None),
     StructMember('modified', 'unsigned', 4, None),
     StructMember('comment_length', 'unsigned', 2, None),
-    StructMember('extra_finder_flags', 'unsigned', 1, None),
+    StructMember('extra_finder_flags', 'unsigned', 1, 0),
+        # Bit 7 - hasNoInits
+        # Bit 6 - isShared
+        # Bit 5 - requiresSwitchLaunch
+        # Bit 4 - ColorReserved
+        # Bits 1-3 - color
+        # Bit 0 - isOnDesk
     StructMember('signature', 'fixed_string', 4, 'mBIN'),
-    StructMember('filename_script', 'unsigned', 1, None),
-    StructMember('extended_finder_flags', 'unsigned', 1, None),
+    # See SM_* constants for valid values.
+    StructMember('filename_script', 'unsigned', 1, SM_ROMAN),
+    StructMember('extended_finder_flags', 'unsigned', 1, 0),
+        # fdXFlags field of an fxInfo record
     StructMember('reserved', 'fixed_string', 8, 0),
     StructMember('reserved_for_unpacked_size', 'unsigned', 4, 0),
     StructMember('reserved_for_second_header_length', 'unsigned', 2, 0),
@@ -47,7 +162,7 @@ _MACBINARY_HEADER_MEMBERS = [
     StructMember('header_crc', 'unsigned', 2, None),
     # NOTE: Somebody forgot to include this field in the MacBinary II and III
     #       documentation, although it is in the MacBinary I docs. Grr.
-    StructMember('reserved_for_computer_type_and_os_id', 'unsigned', 2, None),
+    StructMember('reserved_for_computer_type_and_os_id', 'unsigned', 2, 0),
 ]
 
 # ------------------------------------------------------------------------------
@@ -81,6 +196,15 @@ def main(args):
             print '    Actual:   ' + repr(actual_output)
             print
     
+    elif command == 'test_write_custom':
+        output_macbinary = StringIO()
+        write_macbinary(output_macbinary, {
+            'filename': 'Greetings.txt',
+            'file_type': 'TEXT',
+            'file_creator': 'ttxt',
+            'data_fork': 'Hello World!',
+        })
+    
     else:
         sys.exit('Unrecognized command: %s' % command)
         return
@@ -88,6 +212,12 @@ def main(args):
 # ------------------------------------------------------------------------------
 
 def read_macbinary(input):
+    """
+    Reads a MacBinary I, II, or III file from the specified input stream.
+    
+    Returns a MacBinary object. This object is in the format described by
+    `write_macbinary()` and has all its optional fields filled out.
+    """
     macbinary_header = read_macbinary_header(input)
     data_fork = _read_macbinary_section(input, 'data_fork', macbinary_header)
     resource_fork = _read_macbinary_section(input, 'resource_fork', macbinary_header)
@@ -129,10 +259,47 @@ def _seek_to_next_128_byte_boundary(input):
 # ------------------------------------------------------------------------------
 
 def write_macbinary(output, macbinary):
+    """
+    Writes a MacBinary III file to the specified output stream, with the
+    specified contents.
+    
+    A MacBinary object is a dictionary of the format:
+    * filename : str-`filename_script`|unicode -- Name of the encoded file.
+    * filename_script : unsigned(1) (optional) -- Text encoding of the filename.
+    *                                             Defaults to MacRoman (SM_ROMAN).
+    *                                             See SM_* constants for other options.
+    * file_type : str(4)-macroman -- Code for the file type.
+    * file_creator : str(4)-macroman -- Code for the file creator.
+    * data_fork : str-binary (optional) -- The contents of the data fork.
+    * resource_fork : str-binary (optional) -- The contents of the resource fork.
+    
+    * created : mac_timestamp (optional) -- Creation date of the encoded file.
+                                            Defaults to the current datetime.
+    * modified : mac_timestamp (optional) -- Modification date of the encoded file.
+                                             Defaults to the current datetime.
+    * protected : unsigned(1) (optional) -- 0 if the file is unlocked (the default).
+                                            1 if the file is locked.
+    * finder_flags : unsigned(1) (optional) -- See FF_* constants.
+    * extra_finder_flags : unsigned(1) (optional) -- See FFE_* constants.
+    * extended_finder_flags : unsigned(1) (optional) -- fdXFlags field of an fxInfo record.
+    * comment : str-macroman (optional) -- The Finder comment of the file.
+    * parent_directory_id : unsigned(2) (optional) --
+            ID of the directory that originally contained the encoded file.
+    * x_position : unsigned(2) (optional) - X position of the encoded file within its parent directory.
+    * y_position : unsigned(2) (optional) - Y position of the encoded file within its parent directory.
+    
+    Arguments:
+    * output : stream -- An output stream.
+    * macbinary -- A MacBinary object. See documentation above.
+    """
+    if 'data_fork' not in macbinary and 'resource_fork' not in macbinary:
+        raise ValueError(
+            'Must explicitly specify a data fork, a resource fork, or both.')
+    
     macbinary_header = macbinary
-    data_fork = macbinary['data_fork']
-    resource_fork = macbinary['resource_fork']
-    comment = macbinary['comment']
+    data_fork = macbinary.get('data_fork', '')
+    resource_fork = macbinary.get('resource_fork', '')
+    comment = macbinary.get('comment', '')
     
     # Fill in header
     macbinary_header.update({
@@ -149,9 +316,32 @@ def write_macbinary(output, macbinary):
 
 
 def write_macbinary_header(output, macbinary_header):
+    # Try to convert unicode filenames to MacRoman automatically
+    if isinstance(macbinary_header['filename'], unicode):
+        if macbinary_header.get('filename_script', SM_ROMAN) != SM_ROMAN:
+            raise ValueError(
+                "Explicit filename encoding specified but didn't receive a " +
+                "bytestring filename.")
+        else:
+            unicode_filename = macbinary_header['filename']
+            # NOTE: Can fail with UnicodeEncodeError if filename contains
+            #       characters not representable in MacRoman encoding.
+            macroman_filename = unicode_filename.encode('macroman')
+            macbinary_header['filename'] = macroman_filename
+    
+    # If datetime fields not specified, use the current datetime
+    if 'created' not in macbinary_header or 'modified' not in macbinary_header:
+        now_mac_timestamp = convert_local_to_mac_timestamp(time.time())
+        if 'created' not in macbinary_header:
+            macbinary_header['created'] = now_mac_timestamp
+        if 'modified' not in macbinary_header:
+            macbinary_header['modified'] = now_mac_timestamp
+    
+    # Write the header
     macbinary_header['header_crc'] = 0
     write_structure(output, _MACBINARY_HEADER_MEMBERS, macbinary_header)
     
+    # Amend the header with the actual CRC
     with save_stream_position(output):
         offset_to_crc_member = offset_to_structure_member(
             _MACBINARY_HEADER_MEMBERS, 'header_crc')
