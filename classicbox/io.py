@@ -124,13 +124,15 @@ def print_structure(structure, members, name):
 def sizeof_structure(members):
     total_size = 0
     for member in members:
-        if member.type not in ('unsigned', 'signed', 'fixed_string'):
-            raise ValueError('Don\'t know how to find the size of member of type: %s' % member.type)
-        sizeof_member = member.subtype
-        
-        total_size += sizeof_member
-    
+        total_size += sizeof_member(member)
     return total_size
+
+
+def sizeof_member(member):
+    if member.type in ('unsigned', 'signed', 'fixed_string'):
+        return member.subtype
+    else:
+        raise ValueError('Don\'t know how to find the size of member with type: %s' % member.type)
 
 
 def fill_missing_structure_members_with_defaults(structure_members, structure):
