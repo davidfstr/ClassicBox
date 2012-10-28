@@ -6,11 +6,10 @@ Manipulates MacBinary files.
 
 from classicbox.io import print_structure
 from classicbox.io import read_structure
+from classicbox.io import sizeof_structure_member
 from classicbox.io import StructMember
 import sys
 
-
-_VERBOSE_HEADER_FORMAT = False
 
 # MacBinary format reference: http://code.google.com/p/theunarchiver/wiki/MacBinarySpecs
 _MACBINARY_HEADER_MEMBERS = [
@@ -43,6 +42,8 @@ _MACBINARY_HEADER_MEMBERS = [
 ]
 
 # ------------------------------------------------------------------------------
+
+_VERBOSE_HEADER_FORMAT = False
 
 def main(args):
     (macbinary_filepath, ) = args
@@ -104,11 +105,11 @@ def _seek_to_next_128_byte_boundary(input):
 def read_macbinary_header(input):
     return read_structure(input, _MACBINARY_HEADER_MEMBERS)
 
+# ------------------------------------------------------------------------------
 
 def print_macbinary_header(macbinary_header):
     print_structure(macbinary_header, _MACBINARY_HEADER_MEMBERS, 'MacBinary Header')
 
-# ------------------------------------------------------------------------------
 
 def print_structure_format(members, name):
     print name
@@ -116,13 +117,7 @@ def print_structure_format(members, name):
     offset = 0
     for member in members:
         print '%s: %s' % (offset, member.name)
-        
-        # HACK: Size calculation does not work for all member types
-        member_size = member.subtype
-        if member.type == 'pascal_string':
-            member_size += 1
-        
-        offset += member_size
+        offset += sizeof_structure_member(member)
     print
 
 # ------------------------------------------------------------------------------

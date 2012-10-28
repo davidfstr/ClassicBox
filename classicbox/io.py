@@ -124,13 +124,18 @@ def print_structure(structure, members, name):
 def sizeof_structure(members):
     total_size = 0
     for member in members:
-        total_size += sizeof_member(member)
+        total_size += sizeof_structure_member(member)
     return total_size
 
 
-def sizeof_member(member):
+def sizeof_structure_member(member):
     if member.type in ('unsigned', 'signed', 'fixed_string'):
         return member.subtype
+    elif member.type == 'pascal_string':
+        max_string_length = member.subtype
+        if max_string_length is None:
+            raise ValueError("Can't determine size of a dynamic pascal string.")
+        return max_string_length + 1
     else:
         raise ValueError('Don\'t know how to find the size of member with type: %s' % member.type)
 
