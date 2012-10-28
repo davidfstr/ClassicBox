@@ -25,6 +25,10 @@ def main(args):
     elif command == 'test_read_write_exact':
         test_read_write_exact(resource_file_filepath)
     
+    elif command == 'test_write_custom':
+        # NOTE: Doesn't require an input file
+        test_write_custom()
+    
     else:
         sys.exit('Unrecognized command: %s' % command)
         return
@@ -105,6 +109,30 @@ def test_read_write_exact(resource_file_filepath):
         
         print ('#' * 32) + ' ACTUAL ' + ('#' * 32)
         print_resource_fork(StringIO(actual_output))
+
+
+def test_write_custom():
+    """
+    Ensure write_resource_fork() does not crash when passed a minimal resource
+    map structure in the documented format.
+    """
+    output_fork = StringIO()
+    write_resource_fork(output_fork, {
+        'attributes': 0,
+        'resource_types': [
+            {
+                'code': 'alis',
+                'resources': [
+                    {
+                        'id': 0,
+                        'name': 'app alias',
+                        'attributes': 0,
+                        'data': 'meow'
+                    }
+                ]
+            }
+        ]
+    })
 
 # ------------------------------------------------------------------------------
 
