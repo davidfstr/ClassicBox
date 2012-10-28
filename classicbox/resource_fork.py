@@ -12,6 +12,8 @@ from classicbox.io import write_pascal_string
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 
+import sys
+
 
 _RESOURCE_FORK_HEADER_MEMBERS = [
     StructMember('offset_to_resource_data_area', 'unsigned', 4, None),
@@ -252,7 +254,7 @@ def read_resource_data(input, resource_map, resource):
 
 # ------------------------------------------------------------------------------
 
-def write_resource_fork(output, resource_map, _preserve_order=False):
+def write_resource_fork(output, resource_map, _preserve_order=True):
     """
     Writes a resource fork to the specified output stream using the specified
     resource map. All resource names and data must be read into memory.
@@ -287,10 +289,11 @@ def write_resource_fork(output, resource_map, _preserve_order=False):
         for type in resource_types:
             for resource in type['resources']:
                 resources_in_resource_data_area.append((
-                    resource['offset_from_resource_data_area_to_data'],
+                    # (Allow undocumented key to be missing. New resources sort last.)
+                    resource.get('offset_from_resource_data_area_to_data', sys.maxint),
                     resource
                 ))
-        resources_in_resource_data_area.sort()
+        resources_in_resource_data_area.sort()  # NOTE: depends on stable sort
         resources_in_resource_data_area = (
             [resource for (_, resource) in resources_in_resource_data_area]
         )
@@ -300,10 +303,11 @@ def write_resource_fork(output, resource_map, _preserve_order=False):
         for type in resource_types:
             for resource in type['resources']:
                 resources_in_resource_name_list.append((
-                    resource['offset_from_resource_name_list_to_name'],
+                    # (Allow undocumented key to be missing. New resources sort last.)
+                    resource.get('offset_from_resource_name_list_to_name', sys.maxint),
                     resource
                 ))
-        resources_in_resource_name_list.sort()
+        resources_in_resource_name_list.sort()  # NOTE: depends on stable sort
         resources_in_resource_name_list = (
             [resource for (_, resource) in resources_in_resource_name_list]
         )

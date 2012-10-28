@@ -26,7 +26,7 @@ def main(args):
                 read_everything=True)
         
         output_fork = StringIO()
-        write_resource_fork(output_fork, original_resource_map, _preserve_order=True)
+        write_resource_fork(output_fork, original_resource_map)
         
         with open(resource_file_filepath, 'rb') as file:
             expected_output = file.read()
