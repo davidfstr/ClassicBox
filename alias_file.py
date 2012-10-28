@@ -7,6 +7,7 @@ Writes MacOS alias files.
 # TODO: Extract common methods to classicbox.macbinary
 from macbinary_file import FF_HAS_BEEN_INITED
 from macbinary_file import FF_IS_ALIAS
+from macbinary_file import write_macbinary
 
 # TODO: Avoid need to import private member _ALIAS_RECORD_MEMBERS
 from classicbox.alias.record import _ALIAS_RECORD_MEMBERS
@@ -25,6 +26,8 @@ import sys
 
 # ------------------------------------------------------------------------------
 
+VERBOSE_ALIAS_OUTPUT = False
+
 def main(args):
     # Parse arguments
     command = args.pop(0)
@@ -38,10 +41,14 @@ def main(args):
         sys.exit('File exists: %s' % output_alias_resource_fork_filepath)
         return
     
-    if command == 'write_fixed':
+    if command == 'write_fixed_as_fork':
         write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath)
-    elif command == 'write_targeted':
-        write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath, args)
+    elif command == 'write_targeted_as_fork':
+        write_targeted_alias(output_alias_resource_fork_filepath, args,
+            output_type='resource_fork')
+    elif command == 'write_targeted_as_macbinary':
+        write_targeted_alias(output_alias_resource_fork_filepath, args,
+            output_type='macbinary')
     else:
         sys.exit('Unknown command: %s' % command)
         return
@@ -94,7 +101,7 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath):
         })
 
 
-def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath, args):
+def write_targeted_alias(output_filepath, args, output_type):
     """
     Writes an alias resource fork file that targets a particular
     item in an HFS disk image.
@@ -115,28 +122,58 @@ def write_targeted_alias_resource_fork_file(output_alias_resource_fork_filepath,
     write_alias_record(alis_resource_contents_output, alias_record)
     alis_resource_contents = alis_resource_contents_output.getvalue()
     
-    # Display the resulting alias record
-    fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
-    print_alias_record(alias_record)
+    if VERBOSE_ALIAS_OUTPUT:
+        # Display the resulting alias record
+        fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
+        print_alias_record(alias_record)
     
-    # Write alias file resource fork containing the alias record
-    with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
-        write_resource_fork(resource_fork_output, {
-            'attributes': 0,
-            'resource_types': [
-                {
-                    'code': alias_resource_info['type'],
-                    'resources': [
-                        {
-                            'id': alias_resource_info['id'],
-                            'name': alias_resource_info['name'],
-                            'attributes': alias_resource_info['attributes'],
-                            'data': alis_resource_contents
-                        }
-                    ]
-                }
-            ]
-        })
+    # Create resource fork containing the alias record
+    resource_fork_output = StringIO()
+    write_resource_fork(resource_fork_output, {
+        'attributes': 0,
+        'resource_types': [
+            {
+                'code': alias_resource_info['type'],
+                'resources': [
+                    {
+                        'id': alias_resource_info['id'],
+                        'name': alias_resource_info['name'],
+                        'attributes': alias_resource_info['attributes'],
+                        'data': alis_resource_contents
+                    }
+                ]
+            }
+        ]
+    })
+    resource_fork_contents = resource_fork_output.getvalue()
+    
+    if output_type == 'resource_fork':
+        with open(output_filepath, 'wb') as output:
+            output.write(resource_fork_contents)
+        return
+    
+    # Determine alias filename
+    alias_filename = os.path.basename(output_filepath)
+    if alias_filename.endswith('.bin'):
+        alias_filename = alias_filename[:-len('.bin')]
+    
+    # Create MacBinary-encoded alias file
+    macbinary_output = StringIO()
+    write_macbinary(macbinary_output, {
+        'filename': alias_filename,
+        'file_type': alias_info['alias_file_info']['alias_file_type'],
+        'file_creator': alias_info['alias_file_info']['alias_file_creator'],
+        'finder_flags': alias_info['alias_file_info']['alias_file_flags'],
+        'resource_fork': resource_fork_contents,
+    })
+    macbinary_contents = macbinary_output.getvalue()
+    
+    if output_type == 'macbinary':
+        with open(output_filepath, 'wb') as output:
+            output.write(macbinary_contents)
+        return
+    
+    raise ValueError('Unknown output type: %s' % output_type)
 
 # ------------------------------------------------------------------------------
 
@@ -163,6 +200,8 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         'attributes': 0
     }
     
+    # Fill in common fields of the alias record.
+    # Additional fields will be filled in depending on the alias type.
     alias_record = {
         'volume_name': volume_info['name'],
         'volume_created': volume_info['created'],
@@ -175,9 +214,31 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         'nlvl_to': 1,               # assume alias file on same volume as target
     }
     
+    # Fill in common fields of the alias file info.
+    # Additional fields will be filled in depending on the alias type.
+    alias_file_info = {
+        # NOTE: Alias files will additionally have the FF_HAS_BEEN_INITED bit
+        #       set when the Finder sees it for the first time and adds its
+        #       icon to the desktop database (if applicable).
+        'alias_file_flags': FF_IS_ALIAS
+    }
+    
     target_is_volume = target_macitempath.endswith(':')
     if target_is_volume:
         # Target is volume
+        
+        # A Finder-created alias file to a volume additionally contains a custom icon
+        # {'ICN#', 'ics#', 'SICN'} that matches the volume that it refers to.
+        # 
+        # Here, we are creating an alias file without a custom icon, that will
+        # appear visually as a regular document alias (ick!) but will still work.
+        # Finder will actually add the custom icon to the existing alias file
+        # when the user attempts to open the file.
+        # 
+        # If it is desired to add the custom icon in the future, it is important
+        # to include the FF_HAS_CUSTOM_ICON flag for the alias file (in addition
+        # to FF_IS_ALIAS).
+        
         alias_record.update({
             'alias_kind': 1,            # 1 = directory
             'parent_directory_id': 1,   # special ID for parent of all volumes
@@ -191,22 +252,10 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
             ]
         })
         
-        # A Finder-created alias file to a volume contains a custom icon
-        # {'ICN#', 'ics#', 'SICN'} that matches the volume that it refers to.
-        # 
-        # Here, we are creating an alias file without a custom icon, that will
-        # appear visually as a regular document alias (ick!) but will still work.
-        # Finder will actually add the custom icon to the existing alias file
-        # when the user attempts to open the file.
-        # 
-        # If it is desired to add the custom icon in the future, it is important
-        # to include the FF_HAS_CUSTOM_ICON flag for the alias file
-        # (in addition to FF_IS_ALIAS).
-        alias_file_info = {
+        alias_file_info.update({
             'alias_file_type': 'hdsk',
             'alias_file_creator': 'MACS',
-            'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
-        }
+        })
         
     else:
         # Target is file or folder
@@ -237,19 +286,17 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
             
             if target_item_info.type == 'APPL':
                 # Target is application file
-                alias_file_info = {
+                alias_file_info.update({
                     'alias_file_type': 'adrp',
                     'alias_file_creator': target_item_info.creator,
-                    'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
-                }
+                })
                 
             else:
                 # Target is document file
-                alias_file_info = {
+                alias_file_info.update({
                     'alias_file_type': target_item_info.type,
-                    'alias_file_creator': 'MPS ',
-                    'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
-                }
+                    'alias_file_creator': target_item_info.creator,
+                })
             
         else:
             # Target is folder
@@ -259,15 +306,20 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
                 'file_creator': 0,  # random junk in native MacOS implementation
             })
             
-            alias_file_info = {
-                # NOTE: Various special folders have their own special type
-                #       code. For example 'Boot:System Folder:' is 'fasy',
+            alias_file_info.update({
+                # NOTE: Various special folders have their own special type code.
+                #       For example 'Boot:System Folder:' is 'fasy',
                 #       and 'Disk:Trash:' is 'trsh'. <sigh>
+                #       
                 #       For a complete list, see Finder.h in the Carbon headers.
+                #       
+                #       Using the generic folder type code (as this
+                #       implementation does) results in an alias that works,
+                #       but that will initially have a generic folder icon
+                #       until the alias is opened.
                 'alias_file_type': 'fdrp',
                 'alias_file_creator': 'MACS',
-                'alias_file_flags': (FF_IS_ALIAS | FF_HAS_BEEN_INITED)
-            }
+            })
     
     return {
         'alias_record': alias_record,
