@@ -13,6 +13,7 @@ from classicbox.disk.hfs import hfs_copy_in_from_stream
 from classicbox.disk.hfs import hfs_mount
 from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
+from classicbox.disk.hfs import hfspath_itemname
 from classicbox.disk.hfs import hfspath_normpath
 from classicbox.io import fill_missing_structure_members_with_defaults
 from classicbox.macbinary import FF_HAS_BEEN_INITED
@@ -33,12 +34,14 @@ def main(args):
     force = (len(args) >= 1 and args[0] == '-f')
     if force:
         args = args[1:]
-    output_alias_resource_fork_filepath = args.pop(0)
     
-    # Don't let the user inadvertently clobber an existing file
-    if not force and os.path.exists(output_alias_resource_fork_filepath):
-        sys.exit('File exists: %s' % output_alias_resource_fork_filepath)
-        return
+    if command != 'create':
+        output_alias_resource_fork_filepath = args.pop(0)
+        
+        # Don't let the user inadvertently clobber an existing file
+        if not force and os.path.exists(output_alias_resource_fork_filepath):
+            sys.exit('File exists: %s' % output_alias_resource_fork_filepath)
+            return
     
     if command == 'write_fixed_as_fork':
         write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath)
@@ -51,6 +54,8 @@ def main(args):
     elif command == 'write_targeted_as_hfs_file':
         write_targeted_alias(output_alias_resource_fork_filepath, args,
             output_type='hfs_file')
+    elif command == 'create':
+        create_alias(*args)
     else:
         sys.exit('Unknown command: %s' % command)
         return
@@ -86,7 +91,6 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath):
     
     with open(output_alias_resource_fork_filepath, 'wb') as resource_fork_output:
         write_resource_fork(resource_fork_output, {
-            'attributes': 0,
             'resource_types': [
                 {
                     'code': 'alis',
@@ -105,8 +109,8 @@ def write_fixed_alias_resource_fork_file(output_alias_resource_fork_filepath):
 
 def write_targeted_alias(output_filepath, args, output_type):
     """
-    Writes an alias resource fork file that targets a particular
-    item in an HFS disk image.
+    Writes an alias as a resource fork file, as a MacBinary file, or
+    as an HFS file that targets a particular item in an HFS disk image.
     """
     
     # Parse arguments
@@ -129,10 +133,9 @@ def write_targeted_alias(output_filepath, args, output_type):
         fill_missing_structure_members_with_defaults(_ALIAS_RECORD_MEMBERS, alias_record)
         print_alias_record(alias_record)
     
-    # Create resource fork containing the alias record
+    # Serialize alias file resource fork
     resource_fork_output = StringIO()
     write_resource_fork(resource_fork_output, {
-        'attributes': 0,
         'resource_types': [
             {
                 'code': alias_resource_info['type'],
@@ -157,19 +160,19 @@ def write_targeted_alias(output_filepath, args, output_type):
     # Determine alias filename
     if output_type == 'hfs_file':
         # (Not a normal filepath. So we must do our own `basename` ourselves.)
-        alias_filename = output_filepath.rsplit(':', 1)[-1]
+        alias_file_filename = output_filepath.rsplit(':', 1)[-1]
     else:
-        alias_filename = os.path.basename(output_filepath)
-    if alias_filename.endswith('.bin'):
-        alias_filename = alias_filename[:-len('.bin')]
+        alias_file_filename = os.path.basename(output_filepath)
+    if alias_file_filename.endswith('.bin'):
+        alias_file_filename = alias_file_filename[:-len('.bin')]
     
-    # Create MacBinary-encoded alias file
+    # Serialize MacBinary-encoded alias file
     macbinary_output = StringIO()
     write_macbinary(macbinary_output, {
-        'filename': alias_filename,
-        'file_type': alias_info['alias_file_info']['alias_file_type'],
-        'file_creator': alias_info['alias_file_info']['alias_file_creator'],
-        'finder_flags': alias_info['alias_file_info']['alias_file_flags'],
+        'filename': alias_file_filename,
+        'file_type': alias_file_info['alias_file_type'],
+        'file_creator': alias_file_info['alias_file_creator'],
+        'finder_flags': alias_file_info['alias_file_finder_flags'],
         'resource_fork': resource_fork_contents,
     })
     macbinary_contents = macbinary_output.getvalue()
@@ -196,6 +199,65 @@ def write_targeted_alias(output_filepath, args, output_type):
 
 # ------------------------------------------------------------------------------
 
+def create_alias(
+        output_disk_image_filepath, output_macfilepath,
+        target_disk_image_filepath, target_macitempath):
+    """
+    Creates an alias at the specified output path that references the specified 
+    target item.
+    
+    Both paths reside within disk images. The target must already exist.
+    """
+    
+    alias_file_filename = hfspath_itemname(output_macfilepath)
+    
+    # Create alias info for the target item
+    alias_info = create_alias_info_for_item_on_disk_image(
+        target_disk_image_filepath, target_macitempath)
+    alias_record = alias_info['alias_record']
+    alias_resource_info = alias_info['alias_resource_info']
+    alias_file_info = alias_info['alias_file_info']
+    
+    # Serialize alias record
+    alis_resource_contents_output = StringIO()
+    write_alias_record(alis_resource_contents_output, alias_record)
+    alis_resource_contents = alis_resource_contents_output.getvalue()
+    
+    # Serialize alias file resource fork
+    resource_fork = StringIO()
+    write_resource_fork(resource_fork, {
+        'resource_types': [
+            {
+                'code': alias_resource_info['type'],
+                'resources': [
+                    {
+                        'id': alias_resource_info['id'],
+                        'name': alias_resource_info['name'],
+                        'attributes': alias_resource_info['attributes'],
+                        'data': alis_resource_contents
+                    }
+                ]
+            }
+        ]
+    })
+    resource_fork_contents = resource_fork.getvalue()
+    
+    # Serialize MacBinary-encoded alias file
+    macbinary_output = StringIO()
+    write_macbinary(macbinary_output, {
+        'filename': alias_file_filename,
+        'file_type': alias_file_info['alias_file_type'],
+        'file_creator': alias_file_info['alias_file_creator'],
+        'finder_flags': alias_file_info['alias_file_finder_flags'],
+        'resource_fork': resource_fork_contents,
+    })
+    macbinary_contents = macbinary_output.getvalue()
+    
+    # Write the alias file to the source path
+    hfs_mount(output_disk_image_filepath)
+    hfs_copy_in_from_stream(StringIO(macbinary_contents), output_macfilepath)
+
+
 def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitempath):
     """
     Creates an alias that targets the specified item on the specified disk image.
@@ -209,7 +271,6 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
     target_macitempath = hfspath_normpath(target_macitempath)
     
     volume_info = hfs_mount(disk_image_filepath)
-    
     target_item_info = hfs_stat(target_macitempath)
     
     alias_resource_info = {
@@ -220,7 +281,7 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
     }
     
     # Fill in common fields of the alias record.
-    # Additional fields will be filled in depending on the alias type.
+    # Additional fields will be filled in later depending on the alias type.
     alias_record = {
         'volume_name': volume_info['name'],
         'volume_created': volume_info['created'],
@@ -234,12 +295,12 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
     }
     
     # Fill in common fields of the alias file info.
-    # Additional fields will be filled in depending on the alias type.
+    # Additional fields will be filled in later depending on the alias type.
     alias_file_info = {
         # NOTE: Alias files will additionally have the FF_HAS_BEEN_INITED bit
         #       set when the Finder sees it for the first time and adds its
         #       icon to the desktop database (if applicable).
-        'alias_file_flags': FF_IS_ALIAS
+        'alias_file_finder_flags': FF_IS_ALIAS
     }
     
     target_is_volume = target_macitempath.endswith(':')

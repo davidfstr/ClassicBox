@@ -32,7 +32,7 @@ _RESOURCE_MAP_HEADER_MEMBERS = [
     StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, 0),
     StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, 0),
     StructMember('reserved_for_file_reference_number', 'unsigned', 2, 0),
-    StructMember('attributes', 'unsigned', 2, None),
+    StructMember('attributes', 'unsigned', 2, 0),
     StructMember('offset_to_resource_type_list', 'unsigned', 2, None),
     StructMember('offset_to_resource_name_list', 'unsigned', 2, None),
     StructMember('resource_type_count_minus_one', 'unsigned', 2, None),
@@ -100,7 +100,8 @@ def read_resource_fork(
     * name : str-macroman -- Name of this resource.
                              Only available if `read_all_resource_names` is
                              True (the default).
-    * attributes : unsigned(1) -- Attributes of this resource. See RES_* constants.
+    * attributes : unsigned(1) (optional) -- Attributes of this resource.
+                                             See RES_* constants.
     * data : str-binary -- Data of this resource.
                            Only available if `read_all_resource_data` is True.
     
