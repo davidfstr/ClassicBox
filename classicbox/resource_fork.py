@@ -288,8 +288,6 @@ def write_resource_fork(output, resource_map):
                 next_name_offset += name_size
             
             data_size = 4 + len(resource['data'])
-            if data_size & 0x1 == 1:
-                data_size += 1
             
             resource['offset_from_resource_data_area_to_data'] = next_data_offset
             next_data_offset += data_size
@@ -381,8 +379,6 @@ def _write_resource_data_area_using_map(output, resource_map):
             
             write_unsigned(output, 4, resource_data_length)
             output.write(resource_data)
-            if resource_data_length & 0x1 == 1:
-                output.write(chr(0))
 
 
 def _write_resource_map(output, resource_map):
