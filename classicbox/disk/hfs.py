@@ -197,6 +197,31 @@ def hfs_copy_in_from_stream(source_stream, target_macfilepath):
     finally:
         os.remove(temp_filepath)
 
+
+def hfs_exists(macitempath):
+    """
+    Returns whether the specified item exists on the mounted HFS volume.
+    """
+    process = subprocess.Popen(
+        ['hdir', '-i', '-d', macitempath],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (out, err) = process.communicate()
+    if err.endswith('no such file or directory\n'):
+        return False
+    if process.returncode != 0 or err != '':
+        raise IOError('Called process returned error. Code %s: %s' % (
+            process.returncode, err))
+    return True
+
+
+def hfs_delete(macitempath):
+    """
+    Deletes the specified item on the mounted HFS volume.
+    """
+    subprocess.check_call(
+        ['hdel', macitempath],
+        stdout=DEVNULL, stderr=DEVNULL)
+
 # ------------------------------------------------------------------------------
 # HFS Path Manipulation
 
