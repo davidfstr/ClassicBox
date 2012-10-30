@@ -180,3 +180,22 @@ def save_stream_position(stream):
     original_position = stream.tell()
     yield
     stream.seek(original_position)
+
+
+def write_nulls(output, num_bytes):
+    """
+    Writes the specified number of NULL bytes to the specified output stream.
+    
+    This implementation is optimized to write a large number of bytes quickly.
+    """
+    zero_byte = chr(0)
+    
+    # Write blocks of 1024 bytes first
+    zero_kilobyte = zero_byte * 1024
+    while num_bytes >= 1024:
+        output.write(zero_kilobyte)
+        num_bytes -= 1024
+    
+    # Write remaining bytes
+    for i in xrange(num_bytes):
+        output.write(zero_byte)

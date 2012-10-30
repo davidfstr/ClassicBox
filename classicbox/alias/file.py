@@ -12,7 +12,7 @@ from classicbox.disk.hfs import hfspath_itemname
 from classicbox.disk.hfs import hfspath_normpath
 from classicbox.macbinary import FF_HAS_BEEN_INITED
 from classicbox.macbinary import FF_IS_ALIAS
-from classicbox.macbinary import write_macbinary
+from classicbox.macbinary import write_macbinary_to_buffer
 from classicbox.resource_fork import write_resource_fork
 from StringIO import StringIO
 
@@ -61,19 +61,17 @@ def create_alias_file(
     resource_fork_contents = resource_fork.getvalue()
     
     # Serialize MacBinary-encoded alias file
-    macbinary_output = StringIO()
-    write_macbinary(macbinary_output, {
+    macbinary_buffer = write_macbinary_to_buffer({
         'filename': alias_file_filename,
         'file_type': alias_file_info['alias_file_type'],
         'file_creator': alias_file_info['alias_file_creator'],
         'finder_flags': alias_file_info['alias_file_finder_flags'],
         'resource_fork': resource_fork_contents,
     })
-    macbinary_contents = macbinary_output.getvalue()
     
     # Write the alias file to the source path
     hfs_mount(output_disk_image_filepath)
-    hfs_copy_in_from_stream(StringIO(macbinary_contents), output_macfilepath)
+    hfs_copy_in_from_stream(macbinary_buffer, output_macfilepath)
 
 
 def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitempath):

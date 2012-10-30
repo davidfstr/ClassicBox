@@ -13,6 +13,7 @@ from classicbox.io import StructMember
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 from classicbox.time import convert_local_to_mac_timestamp
+from StringIO import StringIO
 import time
 
 
@@ -229,6 +230,20 @@ def _seek_to_next_128_byte_boundary(input):
         input.seek(current_offset + offset_to_next_boundary)
 
 # ------------------------------------------------------------------------------
+
+def write_macbinary_to_buffer(macbinary):
+    """
+    Convenience method that writes a MacBinary file to an in-memory StringIO
+    buffer and then returns that (rewound) buffer.
+    
+    Do not use this method for potentially large files, since the entire
+    file is buffered in memory.
+    """
+    buffer = StringIO()
+    write_macbinary(buffer, macbinary)
+    buffer.seek(0)
+    return buffer
+
 
 def write_macbinary(output, macbinary):
     """

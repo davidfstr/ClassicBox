@@ -65,8 +65,9 @@ def test_read_write_approx(resource_file_filepath):
     actual_output = output_fork.getvalue()
     
     matches = (actual_output == expected_output)
-    print 'Matches? ' + ('yes' if matches else 'no')
-    if not matches:
+    if matches:
+        print 'OK'
+    else:
         print '    Expected: ' + repr(expected_output)
         print '    Actual:   ' + repr(actual_output)
         print
@@ -99,8 +100,9 @@ def test_read_write_exact(resource_file_filepath):
     actual_output = output_fork.getvalue()
     
     matches = (actual_output == expected_output)
-    print 'Matches? ' + ('yes' if matches else 'no')
-    if not matches:
+    if matches:
+        print 'OK'
+    else:
         print '    Expected: ' + repr(expected_output)
         print '    Actual:   ' + repr(actual_output)
         print
@@ -118,7 +120,6 @@ def test_write_custom():
     """
     output_fork = StringIO()
     write_resource_fork(output_fork, {
-        'attributes': 0,
         'resource_types': [
             {
                 'code': 'alis',

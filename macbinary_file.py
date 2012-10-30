@@ -24,8 +24,11 @@ def main(args):
     if _VERBOSE_HEADER_FORMAT:
         print_structure_format(_MACBINARY_HEADER_MEMBERS, 'MacBinary Header Format')
     
-    with open(macbinary_filepath, 'rb') as input:
-        macbinary = read_macbinary(input)
+    if macbinary_filepath == '-':
+        macbinary = None
+    else:
+        with open(macbinary_filepath, 'rb') as input:
+            macbinary = read_macbinary(input)
     
     if command == 'info':
         print_macbinary(macbinary)
@@ -39,8 +42,9 @@ def main(args):
         actual_output = output_macbinary.getvalue()
         
         matches = (actual_output == expected_output)
-        print 'Matches? ' + ('yes' if matches else 'no')
-        if not matches:
+        if matches:
+            print 'OK'
+        else:
             print '    Expected: ' + repr(expected_output)
             print '    Actual:   ' + repr(actual_output)
             print

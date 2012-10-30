@@ -90,8 +90,9 @@ def verify_matches(output, alias_record_file_filepath, alias_record):
         expected_output = file.read()
     
     matches = (actual_output == expected_output)
-    print 'Matches? ' + ('yes' if matches else 'no')
-    if not matches:
+    if matches:
+        print 'OK'
+    else:
         print '    Expected: ' + repr(expected_output)
         print '    Actual:   ' + repr(actual_output)
         print

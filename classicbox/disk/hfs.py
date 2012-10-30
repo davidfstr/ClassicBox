@@ -7,6 +7,7 @@ Support for MFS disk images may be added in the future.
 
 from __future__ import absolute_import
 
+from classicbox.io import write_nulls
 from classicbox.time import convert_ctime_string_to_mac_timestamp
 from classicbox.util import DEVNULL
 from collections import namedtuple
@@ -62,24 +63,24 @@ def hfs_mount(disk_image_filepath):
     for line in hmount_lines:
         line = line.strip('\r\n')
         
-        matcher = _HMOUNT_VOLUME_NAME_RE.match(line)
+        matcher = _HMOUNT_VOLUME_NAME_RE.search(line)
         if matcher is not None:
             name = matcher.group(1)             # str-macroman
             volume_info['name'] = name
         
-        matcher = _HMOUNT_CREATED_RE.match(line)
+        matcher = _HMOUNT_CREATED_RE.search(line)
         if matcher is not None:
             ctime_string = matcher.group(1)     # str-ascii
             volume_info['created_ctime'] = ctime_string
             volume_info['created'] = convert_ctime_string_to_mac_timestamp(ctime_string)
         
-        matcher = _HMOUNT_MODIFIED_RE.match(line)
+        matcher = _HMOUNT_MODIFIED_RE.search(line)
         if matcher is not None:
             ctime_string = matcher.group(1)     # str-ascii
             volume_info['modified_ctime'] = ctime_string
             volume_info['modified'] = convert_ctime_string_to_mac_timestamp(ctime_string)
         
-        matcher = _HMOUNT_BYTES_FREE_RE.match(line)
+        matcher = _HMOUNT_BYTES_FREE_RE.search(line)
         if matcher is not None:
             bytes_free = int(matcher.group(1))  # int
             volume_info['bytes_free'] = bytes_free
@@ -147,12 +148,12 @@ def _parse_hdir_line(line):
     
     Returns an HFSItem.
     """
-    file_matcher = _FILE_LINE_RE.match(line)
+    file_matcher = _FILE_LINE_RE.search(line)
     if file_matcher is not None:
         (id, type, creator, data_size, rsrc_size, date_modified, name) = file_matcher.groups()
         return HFSItem(int(id), name, True, type, creator, int(data_size), int(rsrc_size), date_modified)
     
-    dir_matcher = _DIR_LINE_RE.match(line)
+    dir_matcher = _DIR_LINE_RE.search(line)
     if dir_matcher is not None:
         (id, num_children, date_modified, name) = dir_matcher.groups()
         return HFSItem(int(id), name, False, '    ', '    ', 0, 0, date_modified)
@@ -220,6 +221,43 @@ def hfs_delete(macitempath):
     """
     subprocess.check_call(
         ['hdel', macitempath],
+        stdout=DEVNULL, stderr=DEVNULL)
+
+
+def hfs_format(disk_image_filepath, name):
+    """
+    Formats an existing disk image file and mounts it.
+    
+    Arguments:
+    * disk_image_filepath -- Path to the disk image file.
+    * name -- Name of the new volume.
+    """
+    subprocess.check_call(
+        ['hformat', '-l', name, disk_image_filepath],
+        stdout=DEVNULL, stderr=DEVNULL)
+
+
+def hfs_format_new(disk_image_filepath, name, size):
+    """
+    Creates a new disk image file, formats it, and mounts it.
+    
+    Arguments:
+    * disk_image_filepath -- Path to the disk image file.
+    * name -- Name of the new volume.
+    * size -- Size of the volume to create, in bytes.
+    """
+    with open(disk_image_filepath, 'wb') as output:
+        write_nulls(output, size)
+        
+    hfs_format(disk_image_filepath, name)
+
+
+def hfs_mkdir(macdirpath):
+    """
+    Creates a directory at the specified path on the mounted HFS volume.
+    """
+    subprocess.check_call(
+        ['hmkdir', macdirpath],
         stdout=DEVNULL, stderr=DEVNULL)
 
 # ------------------------------------------------------------------------------

@@ -21,8 +21,10 @@ Breaking changes may happen often during this time.
     * I may decrease this to Python 2.6 in the future.
 * The following tools must be installed and in your system path:
     * [hfsutils] 3.2.6
-        * hmount
+        * hdel
         * hdir
+        * hmkdir
+        * hmount
         * hpwd
     * [unar] 1.3
         * unar
