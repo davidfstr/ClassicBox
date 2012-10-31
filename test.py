@@ -7,6 +7,8 @@ Run automated unit tests.
 # Commands through which tests are run
 import alias_file
 import alias_record
+import catalog_create
+import catalog_diff
 import macbinary_file
 import resource_fork
 
@@ -19,6 +21,13 @@ from classicbox.disk.hfs import hfs_mount
 from classicbox.macbinary import write_macbinary_to_buffer
 import os
 import os.path
+
+# For _test_catalog_create_output()
+from classicbox.time import convert_local_to_mac_timestamp
+import json
+from pprint import pprint
+from tempfile import NamedTemporaryFile
+import time
 
 from contextlib import contextmanager
 from StringIO import StringIO
@@ -40,6 +49,14 @@ def main(args):
     test_classicbox_resource_fork()
     test_classicbox_macbinary()
     test_classicbox_alias_file()
+    
+    # catalog_create, catalog_diff
+    test_catalog_create()
+    test_catalog_diff()
+    
+    # TODO: box_create
+    # TODO: box_bootstrap
+    # TODO: box_up
 
 
 def test_classicbox_io():
@@ -129,6 +146,7 @@ def test_classicbox_macbinary():
         macbinary_file.main(
             ['test_write_custom', '-']))
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def test_classicbox_alias_file():
     test_throws_no_exceptions(
@@ -172,6 +190,173 @@ def _test_create_alias_file():
         if os.path.exists(source_disk_image_filepath):
             os.remove(source_disk_image_filepath)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def test_catalog_create():
+    test_throws_no_exceptions(
+        'test_catalog_create_output', lambda: \
+        _test_catalog_create_output())
+
+
+def _test_catalog_create_output():
+    if not os.path.exists('test_data/generated'):
+        os.mkdir('test_data/generated')
+    
+    disk_image_filepath = 'test_data/generated/Catalog.dsk'
+    
+    try:
+        now = time.time()
+        now_string = time.strftime('%b %d %H:%M', time.localtime(now)).decode('ascii')
+        now_mactimestamp = convert_local_to_mac_timestamp(now)
+        
+        created = 1
+        modified = now_mactimestamp
+        
+        # Create disk image with some files on it
+        hfs_format_new(disk_image_filepath, 'MyDisk', 800 * 1024)
+        hfs_mkdir('MyDisk:CoolApp')
+        hfs_copy_in_from_stream(write_macbinary_to_buffer({
+            'filename': 'CoolApp',
+            'file_type': 'APPL',
+            'file_creator': 'TEST',
+            'data_fork': '',
+            'created': created,
+            'modified': modified,
+        }), 'MyDisk:CoolApp:CoolApp')
+        hfs_copy_in_from_stream(write_macbinary_to_buffer({
+            'filename': 'Readme',
+            'file_type': 'ttro',
+            'file_creator': 'ttxt',
+            'data_fork': 'RTFM!',
+            'created': created,
+            'modified': modified,
+        }), 'MyDisk:CoolApp:Readme')
+        hfs_copy_in_from_stream(write_macbinary_to_buffer({
+            'filename': 'CoolApp Install Log',
+            'file_type': 'TEXT',
+            'file_creator': 'ttxt',
+            'data_fork': 'I installed CoolApp!',
+            'created': created,
+            'modified': modified,
+        }), 'MyDisk:CoolApp Install Log')
+        
+        catalog_json = capture_stdout(lambda: \
+            catalog_create.main([disk_image_filepath]))
+        catalog = json.loads(catalog_json)
+        
+        expected_output = [
+            [u'CoolApp', now_string, [
+                [u'CoolApp', now_string],
+                [u'Readme', now_string],
+            ]],
+            [u'CoolApp Install Log', now_string],
+        ]
+        actual_output = catalog
+        assert_equal(expected_output, actual_output,
+            'Catalog output did not match expected output.')
+    finally:
+        if os.path.exists(disk_image_filepath):
+            os.remove(disk_image_filepath)
+
+
+def test_catalog_diff():
+    test_names = [
+        'test_catalog_diff_add_file',
+        'test_catalog_diff_edit_file',
+        'test_catalog_diff_delete_file',
+        'test_catalog_diff_file_becomes_directory',
+        'test_catalog_diff_directory_becomes_file',
+        # TODO: Make tests that exercise the "ignore tree" functionality as well
+    ]
+    
+    this_module = globals()
+    for test_name in test_names:
+        test_throws_no_exceptions(
+            test_name, lambda: \
+            this_module['_' + test_name]())
+
+
+def _test_catalog_diff_add_file():
+    catalog1 = [
+        [u'File', u'Jan 10 10:00'],
+    ]
+    catalog2 = [
+        [u'File', u'Jan 10 10:00'],
+        [u'NewFile', u'Jan 10 10:00'],
+    ]
+    expected_output = [[], [
+        u'NewFile'
+    ], []]
+    _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
+
+
+def _test_catalog_diff_edit_file():
+    catalog1 = [
+        [u'File', u'Jan 10 10:00'],
+    ]
+    catalog2 = [
+        [u'File', u'Jan 22 22:22'],
+    ]
+    expected_output = [[], [], [
+        [u'File', [u'Jan 10 10:00', u'Jan 22 22:22']]
+    ]]
+    _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
+
+
+def _test_catalog_diff_delete_file():
+    catalog1 = [
+        [u'File', u'Jan 10 10:00'],
+    ]
+    catalog2 = [
+    ]
+    expected_output = [[
+        u'File'
+    ], [], []]
+    _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
+
+
+def _test_catalog_diff_file_becomes_directory():
+    catalog1 = [
+        [u'Hybrid', u'Jan 10 10:00'],
+    ]
+    catalog2 = [
+        [u'Hybrid', u'Jan 10 10:10', [
+            [u'File', u'Jan 22 22:22'],
+        ]],
+    ]
+    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
+
+
+def _test_catalog_diff_directory_becomes_file():
+    catalog1 = [
+        [u'Hybrid', u'Jan 10 10:10', [
+            [u'File', u'Jan 22 22:22'],
+        ]],
+    ]
+    catalog2 = [
+        [u'Hybrid', u'Jan 10 10:00'],
+    ]
+    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
+
+
+def _ensure_catalog_diff_matches(catalog1, catalog2, expected_output):
+    with NamedTemporaryFile(mode='wb', delete=True) as catalog1_file:
+        json.dump(catalog1, catalog1_file)
+        catalog1_file.flush()
+        
+        with NamedTemporaryFile(mode='wb', delete=True) as catalog2_file:
+            json.dump(catalog2, catalog2_file)
+            catalog2_file.flush()
+            
+            the_catalog_diff_json = capture_stdout(lambda: \
+                catalog_diff.main([catalog1_file.name, catalog2_file.name]))[:-1]
+            the_catalog_diff = json.loads(the_catalog_diff_json)
+            
+            actual_output = the_catalog_diff
+            assert_equal(expected_output, actual_output,
+                'Catalog diff output did not match expected output.')
 
 # ------------------------------------------------------------------------------
 # Test Infrastructure
@@ -224,11 +409,32 @@ def _print_test_error(test_name, test_stdout, tb=None):
     if tb is not None:
         traceback.print_exc()
         print
-    # TODO: Also consider printing `test_stdout`
+    if test_stdout != '':
+        print test_stdout,
+        print
 
 
 def _print_test_success(test_name):
     print bold_green('OK  %s') % test_name
+
+
+def capture_stdout(block):
+    test_stdout_buffer = StringIO()
+    with _replace_stdout(test_stdout_buffer):
+        block()
+    return test_stdout_buffer.getvalue()
+
+
+def assert_equal(expected_output, actual_output, message='Assertion failed.'):
+    # (Use repr() to ensure that unicodeness of strings is preserved.)
+    if repr(expected_output) != repr(actual_output):
+        print 'Expected:'
+        pprint(expected_output)
+        print
+        print 'Actual:'
+        pprint(actual_output)
+        
+        raise AssertionError(message)
 
 # ------------------------------------------------------------------------------
 # Terminal Colors
