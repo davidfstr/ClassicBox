@@ -195,7 +195,7 @@ def at_eof(input):
     Returns whether the specified input stream is at EOF.
     """
     with save_stream_position(input):
-        at_eof = input.read(1) == ''
+        at_eof = input.read(1) == b''
     return at_eof
 
 
