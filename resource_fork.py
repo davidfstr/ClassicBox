@@ -128,7 +128,7 @@ def test_write_custom():
                         'id': 0,
                         'name': 'app alias',
                         'attributes': 0,
-                        'data': 'meow'
+                        'data': b'meow'
                     }
                 ]
             }
