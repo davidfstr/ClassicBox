@@ -5,6 +5,7 @@ Manipulates MacBinary files.
 from __future__ import absolute_import
 
 from classicbox.io import BytesIO
+from classicbox.io import NULL_BYTE
 from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
 from classicbox.io import read_structure
@@ -360,7 +361,7 @@ def _pad_until_next_128_byte_boundary(output):
     offset_to_next_boundary = 128 - (current_offset % 128)
     if offset_to_next_boundary < 128:
         for i in xrange(offset_to_next_boundary):
-            output.write(chr(0))
+            output.write(NULL_BYTE)
 
 # ------------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@ Manipulates MacOS alias records.
 
 from classicbox.io import at_eof
 from classicbox.io import BytesIO
+from classicbox.io import NULL_BYTE
 from classicbox.io import read_fixed_bytes
 from classicbox.io import read_structure
 from classicbox.io import read_unsigned
@@ -166,7 +167,7 @@ def _write_extras(output, ignored, value):
         write_unsigned(output, 2, extra_length)
         output.write(extra_content)
         if extra_length & 0x1 == 1:
-            output.write(chr(0))    # padding byte
+            output.write(NULL_BYTE)    # padding byte
 
 
 def _write_parent_directory_name_extra_content(output, extra_value):

@@ -13,6 +13,7 @@ StructMember = namedtuple(
     ('name', 'type', 'subtype', 'default_value'))
 
 # ------------------------------------------------------------------------------
+# Read
 
 def read_structure(input, structure_members, external_readers=None):
     v = {}
@@ -68,6 +69,7 @@ def read_until_eof(input, ignored):
     return input.read()
 
 # ------------------------------------------------------------------------------
+# Write
 
 def write_structure(output, structure_members, structure, external_writers=None):
     this_module = globals()
@@ -102,7 +104,7 @@ def write_unsigned(output, num_bytes, value):
     mask = 0xFF << shift
     
     for i in xrange(num_bytes):
-        output.write(chr((value & mask) >> shift))
+        output.write(bchr((value & mask) >> shift))
         shift -= 8
         mask = mask >> 8
 
@@ -123,17 +125,17 @@ def write_pascal_bytes(output, max_string_length, value):
         if len(value) > max_string_length:
             raise ValueError('Value exceeds the maximum byte count.')
     str_length = len(value)
-    output.write(chr(str_length))
+    output.write(bchr(str_length))
     output.write(value)
     if max_string_length is not None:
-        for i in xrange(max_string_length - str_length):
-            output.write(chr(0))
+        write_nulls(output, max_string_length - str_length)
 
 
 def write_until_eof(output, ignored, value):
     output.write(value)
 
 # ------------------------------------------------------------------------------
+# Misc
 
 def print_structure(structure, members, name):
     print name
@@ -210,7 +212,7 @@ def write_nulls(output, num_bytes):
     
     This implementation is optimized to write a large number of bytes quickly.
     """
-    zero_byte = chr(0)
+    zero_byte = NULL_BYTE   # save to local to improve performance
     
     # Write blocks of 1024 bytes first
     zero_kilobyte = zero_byte * 1024
@@ -222,14 +224,25 @@ def write_nulls(output, num_bytes):
     for i in xrange(num_bytes):
         output.write(zero_byte)
 
+# ------------------------------------------------------------------------------
+# Unicode & Python 3 Shims
+
 # Declare BytesIO class, which will be important when migrating to Python 3
 try:
-    from io import BytesIO      # Python 3
+    from io import BytesIO              # Python 3
 except ImportError:
     from StringIO import StringIO as BytesIO
 
 # Declare StringIO class, which will be important when migrating to Python 3
 try:
-    from io import StringIO     # Python 3
-except ImportError:
     from StringIO import StringIO
+except ImportError:
+    from io import StringIO             # Python 3
+
+def bchr(byte_ordinal):
+    if bytes == str:
+        return chr(byte_ordinal)
+    else:
+        return bytes([byte_ordinal])    # Python 3
+
+NULL_BYTE = bchr(0)
