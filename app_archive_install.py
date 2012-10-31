@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile
 
 
 RECOGNIZED_INSTALLER_APP_CREATORS = [
-    'STi0',         # Stuffit InstallerMaker
+    u'STi0',         # Stuffit InstallerMaker
     # TODO: What about InstallerVISE?
 ]
 
@@ -70,7 +70,7 @@ def main(args):
         # Look for installer apps
         installer_app_items = []
         for item in root_items:
-            if item.type == 'APPL' and item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
+            if item.type == u'APPL' and item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
                 installer_app_items.append(item)
         
         # Identify the primary installer app
@@ -94,7 +94,7 @@ def main(args):
                     #       Remembering to do this everywhere could get quite burdensome,
                     #       so I suggest actually converting all true strings to Unicode
                     #       upon input.
-                    print '    %d: %s' % (i, item.name.decode('macroman')); i += 1
+                    print '    %d: %s' % (i, item.name); i += 1
                 print '    %d: <Cancel>' % i; i += 1
                 try:
                     choice = int(raw_input('Choice? '))

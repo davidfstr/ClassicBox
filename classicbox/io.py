@@ -27,6 +27,10 @@ def read_structure(input, structure_members, external_readers=None):
 
 
 def read_fixed_string(input, num_bytes):
+    return read_fixed_bytes(input, num_bytes).decode('macroman')
+
+
+def read_fixed_bytes(input, num_bytes):
     return input.read(num_bytes)
 
 
@@ -47,6 +51,10 @@ def read_signed(input, num_bytes):
 
 
 def read_pascal_string(input, max_string_length):
+    return read_pascal_bytes(input, max_string_length).decode('macroman')
+
+
+def read_pascal_bytes(input, max_string_length):
     str_length = ord(input.read(1))
     str = input.read(str_length)
     if max_string_length is not None:
@@ -75,8 +83,13 @@ def write_structure(output, structure_members, structure, external_writers=None)
 
 
 def write_fixed_string(output, num_bytes, value):
+    write_fixed_bytes(output, num_bytes,
+        0 if value == 0 else value.encode('macroman'))
+
+
+def write_fixed_bytes(output, num_bytes, value):
     if value == 0:
-        value = '\x00' * num_bytes
+        value = b'\x00' * num_bytes
     if len(value) != num_bytes:
         raise ValueError('Value does not have the expected byte count.')
     output.write(value)
@@ -100,6 +113,13 @@ def write_signed(output, num_bytes, value):
 
 
 def write_pascal_string(output, max_string_length, value):
+    write_pascal_bytes(output, max_string_length, value.encode('macroman'))
+
+
+def write_pascal_bytes(output, max_string_length, value):
+    if max_string_length is not None:
+        if len(value) > max_string_length:
+            raise ValueError('Value exceeds the maximum byte count.')
     str_length = len(value)
     output.write(chr(str_length))
     output.write(value)
@@ -140,15 +160,15 @@ def sizeof_structure(members):
 
 
 def sizeof_structure_member(member):
-    if member.type in ('unsigned', 'signed', 'fixed_string'):
+    if member.type in ('unsigned', 'signed', 'fixed_string', 'fixed_bytes'):
         return member.subtype
-    elif member.type == 'pascal_string':
+    elif member.type in ('pascal_string', 'pascal_bytes'):
         max_string_length = member.subtype
         if max_string_length is None:
             raise ValueError("Can't determine size of a dynamic pascal string.")
         return max_string_length + 1
     else:
-        raise ValueError('Don\'t know how to find the size of member with type: %s' % member.type)
+        raise ValueError("Don't know how to find the size of member with type: %s" % member.type)
 
 
 def offset_to_structure_member(members, member_name):

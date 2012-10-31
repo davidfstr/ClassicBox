@@ -67,10 +67,10 @@ def list_descendants(parent_dirpath):
     tree = []
     for item in hfs_ls(parent_dirpath):
         if item.is_file:
-            tree.append((item.name.decode('macroman'), item.date_modified.decode('ascii')))
+            tree.append((item.name, item.date_modified))
         else:
-            descendants = list_descendants(parent_dirpath + item.name + ':')
-            tree.append((item.name.decode('macroman'), item.date_modified.decode('ascii'), descendants))
+            descendants = list_descendants(parent_dirpath + item.name + u':')
+            tree.append((item.name, item.date_modified, descendants))
     
     return tree
 

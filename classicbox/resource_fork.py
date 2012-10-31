@@ -25,11 +25,11 @@ _RESOURCE_FORK_HEADER_MEMBERS = [
     # complain that the resulting resource fork is damaged. Reserving the
     # appropriate amount of space and filling it with zeros seems to make
     # ResEdit happy.
-    StructMember('reserved_for_system_use', 'fixed_string', 256 - 16, 0),
+    StructMember('reserved_for_system_use', 'fixed_bytes', 256 - 16, 0),
 ]
 
 _RESOURCE_MAP_HEADER_MEMBERS = [
-    StructMember('reserved_for_resource_fork_header_copy', 'fixed_string', 16, 0),
+    StructMember('reserved_for_resource_fork_header_copy', 'fixed_bytes', 16, 0),
     StructMember('reserved_for_next_resource_map_handle', 'unsigned', 4, 0),
     StructMember('reserved_for_file_reference_number', 'unsigned', 2, 0),
     StructMember('attributes', 'unsigned', 2, 0),
@@ -92,14 +92,14 @@ def read_resource_fork(
     * absolute_offset : int -- Offset to the beginning of the resource map.
     
     A ResourceType object is a dictionary of the format:
-    * code : str(4)-macroman -- Code for the resource type.
+    * code : unicode(4) -- Code for the resource type.
     * resources : list<Resource>
     
     A Resource object is a dictionary of the format:
     * id : signed(2) -- ID of this resource.
-    * name : str-macroman -- Name of this resource.
-                             Only available if `read_all_resource_names` is
-                             True (the default).
+    * name : unicode -- Name of this resource.
+                        Only available if `read_all_resource_names` is
+                        True (the default).
     * attributes : unsigned(1) (optional) -- Attributes of this resource.
                                              See RES_* constants.
     * data : str-binary -- Data of this resource.

@@ -3,7 +3,7 @@ Manipulates MacOS alias records.
 """
 
 from classicbox.io import at_eof
-from classicbox.io import read_fixed_string
+from classicbox.io import read_fixed_bytes
 from classicbox.io import read_structure
 from classicbox.io import read_unsigned
 from classicbox.io import StructMember
@@ -39,7 +39,7 @@ _ALIAS_RECORD_MEMBERS = [
         # 1 = alias and target in same directory
     StructMember('volume_attributes', 'unsigned', 4, 0),       # may be 0
     StructMember('volume_filesystem_id', 'fixed_string', 2, 0),# 0 for MFS or HFS
-    StructMember('reserved', 'fixed_string', 10, 0),
+    StructMember('reserved', 'fixed_bytes', 10, 0),
     StructMember('extras', 'extras', None, []),
     StructMember('trailing', 'until_eof', None, ''),
 ]
@@ -83,7 +83,7 @@ def _read_extras(input, ignored):
     while True:
         extra_type = read_unsigned(input, 2)
         extra_length = read_unsigned(input, 2)
-        extra_content = read_fixed_string(input, extra_length)
+        extra_content = read_fixed_bytes(input, extra_length)
         if extra_length & 0x1 == 1:
             input.read(1)   # padding byte
         
@@ -104,7 +104,7 @@ def _read_extras(input, ignored):
 
 
 def _read_parent_directory_name_extra_content(extra_content):
-    return extra_content
+    return extra_content.decode('macroman')
 
 
 def _read_directory_ids_extra_content(extra_content):
@@ -116,7 +116,7 @@ def _read_directory_ids_extra_content(extra_content):
 
 
 def _read_absolute_path_extra_content(extra_content):
-    return extra_content
+    return extra_content.decode('macroman')
 
 
 def _read_end_extra_content(extra_content):
@@ -170,7 +170,7 @@ def _write_extras(output, ignored, value):
 
 
 def _write_parent_directory_name_extra_content(output, extra_value):
-    output.write(extra_value)
+    output.write(extra_value.encode('macroman'))
 
 
 def _write_directory_ids_extra_content(output, extra_value):
@@ -179,7 +179,7 @@ def _write_directory_ids_extra_content(output, extra_value):
 
 
 def _write_absolute_path_extra_content(output, extra_value):
-    output.write(extra_value)
+    output.write(extra_value.encode('macroman'))
 
 
 def _write_end_extra_content(output, extra_value):

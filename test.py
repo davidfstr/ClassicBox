@@ -213,43 +213,43 @@ def _test_catalog_create_output():
         modified = now_mactimestamp
         
         # Create disk image with some files on it
-        hfs_format_new(disk_image_filepath, 'MyDisk', 800 * 1024)
-        hfs_mkdir('MyDisk:CoolApp')
+        hfs_format_new(disk_image_filepath, u'MyDisk', 800 * 1024)
+        hfs_mkdir(u'MyDisk:CoolApp\u2122')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'CoolApp',
-            'file_type': 'APPL',
-            'file_creator': 'TEST',
-            'data_fork': '',
+            'filename': u'CoolApp\u2122',
+            'file_type': u'APPL',
+            'file_creator': u'TEST',
+            'data_fork': b'',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp:CoolApp')
+        }), u'MyDisk:CoolApp\u2122:CoolApp\u2122')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'Readme',
-            'file_type': 'ttro',
-            'file_creator': 'ttxt',
-            'data_fork': 'RTFM!',
+            'filename': u'Readme',
+            'file_type': u'ttro',
+            'file_creator': u'ttxt',
+            'data_fork': b'RTFM!',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp:Readme')
+        }), u'MyDisk:CoolApp\u2122:Readme')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'CoolApp Install Log',
-            'file_type': 'TEXT',
-            'file_creator': 'ttxt',
-            'data_fork': 'I installed CoolApp!',
+            'filename': u'CoolApp Install Log',
+            'file_type': u'TEXT',
+            'file_creator': u'ttxt',
+            'data_fork': b'I installed CoolApp!',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp Install Log')
+        }), u'MyDisk:CoolApp\u2122 Install Log')
         
         catalog_json = capture_stdout(lambda: \
             catalog_create.main([disk_image_filepath]))
         catalog = json.loads(catalog_json)
         
         expected_output = [
-            [u'CoolApp', now_string, [
-                [u'CoolApp', now_string],
+            [u'CoolApp\u2122', now_string, [
+                [u'CoolApp\u2122', now_string],
                 [u'Readme', now_string],
             ]],
-            [u'CoolApp Install Log', now_string],
+            [u'CoolApp\u2122 Install Log', now_string],
         ]
         actual_output = catalog
         assert_equal(expected_output, actual_output,
@@ -278,66 +278,66 @@ def test_catalog_diff():
 
 def _test_catalog_diff_add_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'File', u'Jan 10 10:00'],
-        [u'NewFile', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
+        [u'NewFile\u2122', u'Jan 10 10:00'],
     ]
     expected_output = [[], [
-        u'NewFile'
+        u'NewFile\u2122'
     ], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_edit_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'File', u'Jan 22 22:22'],
+        [u'File\u2122', u'Jan 22 22:22'],
     ]
     expected_output = [[], [], [
-        [u'File', [u'Jan 10 10:00', u'Jan 22 22:22']]
+        [u'File\u2122', [u'Jan 10 10:00', u'Jan 22 22:22']]
     ]]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_delete_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
     ]
     expected_output = [[
-        u'File'
+        u'File\u2122'
     ], [], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_file_becomes_directory():
     catalog1 = [
-        [u'Hybrid', u'Jan 10 10:00'],
+        [u'Hybrid\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'Hybrid', u'Jan 10 10:10', [
+        [u'Hybrid\u2122', u'Jan 10 10:10', [
             [u'File', u'Jan 22 22:22'],
         ]],
     ]
-    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    expected_output = [[u'Hybrid\u2122'], [u'Hybrid\u2122'], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_directory_becomes_file():
     catalog1 = [
-        [u'Hybrid', u'Jan 10 10:10', [
+        [u'Hybrid\u2122', u'Jan 10 10:10', [
             [u'File', u'Jan 22 22:22'],
         ]],
     ]
     catalog2 = [
-        [u'Hybrid', u'Jan 10 10:00'],
+        [u'Hybrid\u2122', u'Jan 10 10:00'],
     ]
-    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    expected_output = [[u'Hybrid\u2122'], [u'Hybrid\u2122'], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
