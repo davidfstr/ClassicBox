@@ -29,8 +29,8 @@ from pprint import pprint
 from tempfile import NamedTemporaryFile
 import time
 
+from classicbox.io import StringIO
 from contextlib import contextmanager
-from StringIO import StringIO
 import sys
 import traceback
 

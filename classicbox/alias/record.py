@@ -3,6 +3,7 @@ Manipulates MacOS alias records.
 """
 
 from classicbox.io import at_eof
+from classicbox.io import BytesIO
 from classicbox.io import read_fixed_bytes
 from classicbox.io import read_structure
 from classicbox.io import read_unsigned
@@ -11,7 +12,6 @@ from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 
 from collections import namedtuple
-from StringIO import StringIO
 
 
 # Alias file format reference: http://xhelmboyx.tripod.com/formats/alias-layout.txt
@@ -109,7 +109,7 @@ def _read_parent_directory_name_extra_content(extra_content):
 
 def _read_directory_ids_extra_content(extra_content):
     extra_value = []
-    extra_content_input = StringIO(extra_content)
+    extra_content_input = BytesIO(extra_content)
     for i in xrange(len(extra_content) // 4):
         extra_value.append(read_unsigned(extra_content_input, 4))
     return extra_value
@@ -157,7 +157,7 @@ def _write_extras(output, ignored, value):
     
     this_module = globals()
     for extra in extras:
-        extra_content_output = StringIO()
+        extra_content_output = BytesIO()
         this_module['_write_' + extra.name + '_extra_content'](extra_content_output, extra.value)
         extra_content = extra_content_output.getvalue()
         extra_length = len(extra_content)

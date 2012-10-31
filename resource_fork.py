@@ -4,9 +4,9 @@
 Reads resource forks.
 """
 
+from classicbox.io import BytesIO
 from classicbox.resource_fork import read_resource_fork
 from classicbox.resource_fork import write_resource_fork
-from StringIO import StringIO
 import sys
 
 # ------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def test_read_write_approx(resource_file_filepath):
             read_everything=True)
     
     # Must write to an intermediate "normalized" fork
-    normalized_fork = StringIO()
+    normalized_fork = BytesIO()
     write_resource_fork(normalized_fork, original_resource_map)
     
     normalized_fork.seek(0)
@@ -58,7 +58,7 @@ def test_read_write_approx(resource_file_filepath):
         normalized_fork,
         read_everything=True)
     
-    output_fork = StringIO()
+    output_fork = BytesIO()
     write_resource_fork(output_fork, normalized_resource_map)
     
     expected_output = normalized_fork.getvalue()
@@ -92,7 +92,7 @@ def test_read_write_exact(resource_file_filepath):
             input,
             read_everything=True)
     
-    output_fork = StringIO()
+    output_fork = BytesIO()
     write_resource_fork(output_fork, original_resource_map)
     
     with open(resource_file_filepath, 'rb') as file:
@@ -107,10 +107,10 @@ def test_read_write_exact(resource_file_filepath):
         print '    Actual:   ' + repr(actual_output)
         print
         print ('#' * 32) + ' EXPECTED ' + ('#' * 32)
-        print_resource_fork(StringIO(expected_output))
+        print_resource_fork(BytesIO(expected_output))
         
         print ('#' * 32) + ' ACTUAL ' + ('#' * 32)
-        print_resource_fork(StringIO(actual_output))
+        print_resource_fork(BytesIO(actual_output))
 
 
 def test_write_custom():
@@ -118,7 +118,7 @@ def test_write_custom():
     Ensure write_resource_fork() does not crash when passed a minimal resource
     map structure in the documented format.
     """
-    output_fork = StringIO()
+    output_fork = BytesIO()
     write_resource_fork(output_fork, {
         'resource_types': [
             {

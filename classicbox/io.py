@@ -2,6 +2,8 @@
 Reads and writes binary data from structures and streams.
 """
 
+from __future__ import absolute_import
+
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -219,3 +221,15 @@ def write_nulls(output, num_bytes):
     # Write remaining bytes
     for i in xrange(num_bytes):
         output.write(zero_byte)
+
+# Declare BytesIO class, which will be important when migrating to Python 3
+try:
+    from io import BytesIO      # Python 3
+except ImportError:
+    from StringIO import StringIO as BytesIO
+
+# Declare StringIO class, which will be important when migrating to Python 3
+try:
+    from io import StringIO     # Python 3
+except ImportError:
+    from StringIO import StringIO

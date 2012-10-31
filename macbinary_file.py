@@ -6,12 +6,12 @@ Manipulates MacBinary files.
 
 from __future__ import absolute_import
 
+from classicbox.io import BytesIO
 from classicbox.io import print_structure_format
 from classicbox.macbinary import _MACBINARY_HEADER_MEMBERS
 from classicbox.macbinary import print_macbinary
 from classicbox.macbinary import read_macbinary
 from classicbox.macbinary import write_macbinary
-from StringIO import StringIO
 import sys
 
 # ------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ def main(args):
         print_macbinary(macbinary)
     
     elif command == 'test_read_write':
-        output_macbinary = StringIO()
+        output_macbinary = BytesIO()
         write_macbinary(output_macbinary, macbinary)
         
         with open(macbinary_filepath, 'rb') as file:
@@ -50,7 +50,7 @@ def main(args):
             print
     
     elif command == 'test_write_custom':
-        output_macbinary = StringIO()
+        output_macbinary = BytesIO()
         write_macbinary(output_macbinary, {
             'filename': 'Greetings.txt',
             'file_type': 'TEXT',

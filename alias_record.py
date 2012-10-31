@@ -8,7 +8,7 @@ from classicbox.alias.record import Extra
 from classicbox.alias.record import print_alias_record
 from classicbox.alias.record import read_alias_record
 from classicbox.alias.record import write_alias_record
-from StringIO import StringIO
+from classicbox.io import BytesIO
 import sys
 
 
@@ -29,7 +29,7 @@ def main(args):
         print_alias_record(alias_record)
         
     elif command == 'test_read_write':
-        output = StringIO()
+        output = BytesIO()
         write_alias_record(output, alias_record)
         
         verify_matches(output, alias_record_file_filepath, alias_record)
@@ -37,7 +37,7 @@ def main(args):
     elif command == 'test_read_write_no_extras':
         alias_record['extras'] = []
         
-        output = StringIO()
+        output = BytesIO()
         write_alias_record(output, alias_record)
         
         output.seek(0)
@@ -58,7 +58,7 @@ def main(args):
 
 def test_write_custom_matching(alias_record_file_filepath, alias_record):
     # "AppAlias.rsrc.dat"
-    output = StringIO()
+    output = BytesIO()
     write_alias_record(output, {
         'alias_kind': 0,
         'volume_name': 'Boot',

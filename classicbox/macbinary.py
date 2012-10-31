@@ -4,6 +4,7 @@ Manipulates MacBinary files.
 
 from __future__ import absolute_import
 
+from classicbox.io import BytesIO
 from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
 from classicbox.io import read_structure
@@ -13,7 +14,6 @@ from classicbox.io import StructMember
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 from classicbox.time import convert_local_to_mac_timestamp
-from StringIO import StringIO
 import time
 
 
@@ -243,13 +243,13 @@ def _seek_to_next_128_byte_boundary(input):
 
 def write_macbinary_to_buffer(macbinary):
     """
-    Convenience method that writes a MacBinary file to an in-memory StringIO
+    Convenience method that writes a MacBinary file to an in-memory BytesIO
     buffer and then returns that (rewound) buffer.
     
     Do not use this method for potentially large files, since the entire
     file is buffered in memory.
     """
-    buffer = StringIO()
+    buffer = BytesIO()
     write_macbinary(buffer, macbinary)
     buffer.seek(0)
     return buffer
