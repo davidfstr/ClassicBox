@@ -239,10 +239,11 @@ try:
 except ImportError:
     from io import StringIO             # Python 3
 
-def bchr(byte_ordinal):
-    if bytes == str:
+if bytes == str:
+    def bchr(byte_ordinal):
         return chr(byte_ordinal)
-    else:
+else:
+    def bchr(byte_ordinal):
         return bytes([byte_ordinal])    # Python 3
 
 NULL_BYTE = bchr(0)
