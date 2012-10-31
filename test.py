@@ -172,7 +172,7 @@ def _test_create_alias_file():
             'filename': 'app',
             'file_type': 'APPL',
             'file_creator': 'TEST',
-            'data_fork': ''
+            'data_fork': b''
         }), 'Target:App:app')
         
         # Ensure an alias can be created without any exceptions

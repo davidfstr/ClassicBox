@@ -227,7 +227,7 @@ def _read_macbinary_header(input):
 def _read_macbinary_section(input, section_type, macbinary_header):
     section_length = macbinary_header[section_type + '_length']
     if section_length == 0:
-        section = ''
+        section = b''
     else:
         section = input.read(section_length)
         _seek_to_next_128_byte_boundary(input)
@@ -295,8 +295,8 @@ def write_macbinary(output, macbinary):
             'Must explicitly specify a data fork, a resource fork, or both.')
     
     macbinary_header = macbinary
-    data_fork = macbinary.get('data_fork', '')
-    resource_fork = macbinary.get('resource_fork', '')
+    data_fork = macbinary.get('data_fork', b'')
+    resource_fork = macbinary.get('resource_fork', b'')
     comment = macbinary.get('comment', '')
     
     # Fill in header
