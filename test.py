@@ -204,7 +204,9 @@ def _test_catalog_create_output():
     
     try:
         now = time.time()
-        now_string = time.strftime('%b %d %H:%M', time.localtime(now)).decode('ascii')
+        now_string = time.strftime('%b %d %H:%M', time.localtime(now))
+        if not isinstance(now_string, unicode):
+            now_string = now_string.decode('ascii')
         now_mactimestamp = convert_local_to_mac_timestamp(now)
         
         created = 1
