@@ -29,8 +29,9 @@ from pprint import pprint
 from tempfile import NamedTemporaryFile
 import time
 
+from classicbox.io import StringIO
+from classicbox.io import touch_temp
 from contextlib import contextmanager
-from StringIO import StringIO
 import sys
 import traceback
 
@@ -155,11 +156,10 @@ def test_classicbox_alias_file():
 
 
 def _test_create_alias_file():
-    if not os.path.exists('test_data/generated'):
-        os.mkdir('test_data/generated')
-    
-    source_disk_image_filepath = 'test_data/generated/SourceDisk.dsk'
-    target_disk_image_filepath = 'test_data/generated/TargetDisk.dsk'
+    source_disk_image_filepath = touch_temp(
+        prefix='SourceDisk', suffix='.dsk')
+    target_disk_image_filepath = touch_temp(
+        prefix='TargetDisk', suffix='.dsk')
     
     try:
         # Create empty source disk image
@@ -172,7 +172,7 @@ def _test_create_alias_file():
             'filename': 'app',
             'file_type': 'APPL',
             'file_creator': 'TEST',
-            'data_fork': ''
+            'data_fork': b''
         }), 'Target:App:app')
         
         # Ensure an alias can be created without any exceptions
@@ -199,57 +199,57 @@ def test_catalog_create():
 
 
 def _test_catalog_create_output():
-    if not os.path.exists('test_data/generated'):
-        os.mkdir('test_data/generated')
-    
-    disk_image_filepath = 'test_data/generated/Catalog.dsk'
+    disk_image_filepath = touch_temp(
+        prefix='Catalog', suffix='.dsk')
     
     try:
         now = time.time()
-        now_string = time.strftime('%b %d %H:%M', time.localtime(now)).decode('ascii')
+        now_string = time.strftime('%b %d %H:%M', time.localtime(now))
+        if not isinstance(now_string, unicode):
+            now_string = now_string.decode('ascii')
         now_mactimestamp = convert_local_to_mac_timestamp(now)
         
         created = 1
         modified = now_mactimestamp
         
         # Create disk image with some files on it
-        hfs_format_new(disk_image_filepath, 'MyDisk', 800 * 1024)
-        hfs_mkdir('MyDisk:CoolApp')
+        hfs_format_new(disk_image_filepath, u'MyDisk', 800 * 1024)
+        hfs_mkdir(u'MyDisk:CoolApp\u2122')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'CoolApp',
-            'file_type': 'APPL',
-            'file_creator': 'TEST',
-            'data_fork': '',
+            'filename': u'CoolApp\u2122',
+            'file_type': u'APPL',
+            'file_creator': u'TEST',
+            'data_fork': b'',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp:CoolApp')
+        }), u'MyDisk:CoolApp\u2122:CoolApp\u2122')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'Readme',
-            'file_type': 'ttro',
-            'file_creator': 'ttxt',
-            'data_fork': 'RTFM!',
+            'filename': u'Readme',
+            'file_type': u'ttro',
+            'file_creator': u'ttxt',
+            'data_fork': b'RTFM!',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp:Readme')
+        }), u'MyDisk:CoolApp\u2122:Readme')
         hfs_copy_in_from_stream(write_macbinary_to_buffer({
-            'filename': 'CoolApp Install Log',
-            'file_type': 'TEXT',
-            'file_creator': 'ttxt',
-            'data_fork': 'I installed CoolApp!',
+            'filename': u'CoolApp Install Log',
+            'file_type': u'TEXT',
+            'file_creator': u'ttxt',
+            'data_fork': b'I installed CoolApp!',
             'created': created,
             'modified': modified,
-        }), 'MyDisk:CoolApp Install Log')
+        }), u'MyDisk:CoolApp\u2122 Install Log')
         
         catalog_json = capture_stdout(lambda: \
             catalog_create.main([disk_image_filepath]))
         catalog = json.loads(catalog_json)
         
         expected_output = [
-            [u'CoolApp', now_string, [
-                [u'CoolApp', now_string],
+            [u'CoolApp\u2122', now_string, [
+                [u'CoolApp\u2122', now_string],
                 [u'Readme', now_string],
             ]],
-            [u'CoolApp Install Log', now_string],
+            [u'CoolApp\u2122 Install Log', now_string],
         ]
         actual_output = catalog
         assert_equal(expected_output, actual_output,
@@ -278,75 +278,75 @@ def test_catalog_diff():
 
 def _test_catalog_diff_add_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'File', u'Jan 10 10:00'],
-        [u'NewFile', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
+        [u'NewFile\u2122', u'Jan 10 10:00'],
     ]
     expected_output = [[], [
-        u'NewFile'
+        u'NewFile\u2122'
     ], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_edit_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'File', u'Jan 22 22:22'],
+        [u'File\u2122', u'Jan 22 22:22'],
     ]
     expected_output = [[], [], [
-        [u'File', [u'Jan 10 10:00', u'Jan 22 22:22']]
+        [u'File\u2122', [u'Jan 10 10:00', u'Jan 22 22:22']]
     ]]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_delete_file():
     catalog1 = [
-        [u'File', u'Jan 10 10:00'],
+        [u'File\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
     ]
     expected_output = [[
-        u'File'
+        u'File\u2122'
     ], [], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_file_becomes_directory():
     catalog1 = [
-        [u'Hybrid', u'Jan 10 10:00'],
+        [u'Hybrid\u2122', u'Jan 10 10:00'],
     ]
     catalog2 = [
-        [u'Hybrid', u'Jan 10 10:10', [
+        [u'Hybrid\u2122', u'Jan 10 10:10', [
             [u'File', u'Jan 22 22:22'],
         ]],
     ]
-    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    expected_output = [[u'Hybrid\u2122'], [u'Hybrid\u2122'], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _test_catalog_diff_directory_becomes_file():
     catalog1 = [
-        [u'Hybrid', u'Jan 10 10:10', [
+        [u'Hybrid\u2122', u'Jan 10 10:10', [
             [u'File', u'Jan 22 22:22'],
         ]],
     ]
     catalog2 = [
-        [u'Hybrid', u'Jan 10 10:00'],
+        [u'Hybrid\u2122', u'Jan 10 10:00'],
     ]
-    expected_output = [[u'Hybrid'], [u'Hybrid'], []]
+    expected_output = [[u'Hybrid\u2122'], [u'Hybrid\u2122'], []]
     _ensure_catalog_diff_matches(catalog1, catalog2, expected_output)
 
 
 def _ensure_catalog_diff_matches(catalog1, catalog2, expected_output):
-    with NamedTemporaryFile(mode='wb', delete=True) as catalog1_file:
+    with NamedTemporaryFile(mode='wt', delete=True) as catalog1_file:
         json.dump(catalog1, catalog1_file)
         catalog1_file.flush()
         
-        with NamedTemporaryFile(mode='wb', delete=True) as catalog2_file:
+        with NamedTemporaryFile(mode='wt', delete=True) as catalog2_file:
             json.dump(catalog2, catalog2_file)
             catalog2_file.flush()
             

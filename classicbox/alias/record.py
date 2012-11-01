@@ -3,7 +3,9 @@ Manipulates MacOS alias records.
 """
 
 from classicbox.io import at_eof
-from classicbox.io import read_fixed_string
+from classicbox.io import BytesIO
+from classicbox.io import NULL_BYTE
+from classicbox.io import read_fixed_bytes
 from classicbox.io import read_structure
 from classicbox.io import read_unsigned
 from classicbox.io import StructMember
@@ -11,7 +13,6 @@ from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 
 from collections import namedtuple
-from StringIO import StringIO
 
 
 # Alias file format reference: http://xhelmboyx.tripod.com/formats/alias-layout.txt
@@ -39,9 +40,9 @@ _ALIAS_RECORD_MEMBERS = [
         # 1 = alias and target in same directory
     StructMember('volume_attributes', 'unsigned', 4, 0),       # may be 0
     StructMember('volume_filesystem_id', 'fixed_string', 2, 0),# 0 for MFS or HFS
-    StructMember('reserved', 'fixed_string', 10, 0),
+    StructMember('reserved', 'fixed_bytes', 10, 0),
     StructMember('extras', 'extras', None, []),
-    StructMember('trailing', 'until_eof', None, ''),
+    StructMember('trailing', 'until_eof', None, b''),
 ]
 
 _ExtraType = namedtuple(
@@ -83,7 +84,7 @@ def _read_extras(input, ignored):
     while True:
         extra_type = read_unsigned(input, 2)
         extra_length = read_unsigned(input, 2)
-        extra_content = read_fixed_string(input, extra_length)
+        extra_content = read_fixed_bytes(input, extra_length)
         if extra_length & 0x1 == 1:
             input.read(1)   # padding byte
         
@@ -104,19 +105,19 @@ def _read_extras(input, ignored):
 
 
 def _read_parent_directory_name_extra_content(extra_content):
-    return extra_content
+    return extra_content.decode('macroman')
 
 
 def _read_directory_ids_extra_content(extra_content):
     extra_value = []
-    extra_content_input = StringIO(extra_content)
+    extra_content_input = BytesIO(extra_content)
     for i in xrange(len(extra_content) // 4):
         extra_value.append(read_unsigned(extra_content_input, 4))
     return extra_value
 
 
 def _read_absolute_path_extra_content(extra_content):
-    return extra_content
+    return extra_content.decode('macroman')
 
 
 def _read_end_extra_content(extra_content):
@@ -157,7 +158,7 @@ def _write_extras(output, ignored, value):
     
     this_module = globals()
     for extra in extras:
-        extra_content_output = StringIO()
+        extra_content_output = BytesIO()
         this_module['_write_' + extra.name + '_extra_content'](extra_content_output, extra.value)
         extra_content = extra_content_output.getvalue()
         extra_length = len(extra_content)
@@ -166,11 +167,11 @@ def _write_extras(output, ignored, value):
         write_unsigned(output, 2, extra_length)
         output.write(extra_content)
         if extra_length & 0x1 == 1:
-            output.write(chr(0))    # padding byte
+            output.write(NULL_BYTE)    # padding byte
 
 
 def _write_parent_directory_name_extra_content(output, extra_value):
-    output.write(extra_value)
+    output.write(extra_value.encode('macroman'))
 
 
 def _write_directory_ids_extra_content(output, extra_value):
@@ -179,7 +180,7 @@ def _write_directory_ids_extra_content(output, extra_value):
 
 
 def _write_absolute_path_extra_content(output, extra_value):
-    output.write(extra_value)
+    output.write(extra_value.encode('macroman'))
 
 
 def _write_end_extra_content(output, extra_value):

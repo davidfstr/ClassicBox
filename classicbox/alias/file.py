@@ -10,11 +10,11 @@ from classicbox.disk.hfs import hfs_stat
 from classicbox.disk.hfs import hfspath_dirpath
 from classicbox.disk.hfs import hfspath_itemname
 from classicbox.disk.hfs import hfspath_normpath
+from classicbox.io import BytesIO
 from classicbox.macbinary import FF_HAS_BEEN_INITED
 from classicbox.macbinary import FF_IS_ALIAS
 from classicbox.macbinary import write_macbinary_to_buffer
 from classicbox.resource_fork import write_resource_fork
-from StringIO import StringIO
 
 
 def create_alias_file(
@@ -37,12 +37,12 @@ def create_alias_file(
     alias_file_info = alias_info['alias_file_info']
     
     # Serialize alias record
-    alis_resource_contents_output = StringIO()
+    alis_resource_contents_output = BytesIO()
     write_alias_record(alis_resource_contents_output, alias_record)
     alis_resource_contents = alis_resource_contents_output.getvalue()
     
     # Serialize alias file resource fork
-    resource_fork = StringIO()
+    resource_fork = BytesIO()
     write_resource_fork(resource_fork, {
         'resource_types': [
             {

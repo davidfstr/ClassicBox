@@ -4,6 +4,9 @@ Manipulates MacBinary files.
 
 from __future__ import absolute_import
 
+from classicbox.io import BytesIO
+from classicbox.io import iterord
+from classicbox.io import NULL_BYTE
 from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
 from classicbox.io import read_structure
@@ -13,7 +16,6 @@ from classicbox.io import StructMember
 from classicbox.io import write_structure
 from classicbox.io import write_unsigned
 from classicbox.time import convert_local_to_mac_timestamp
-from StringIO import StringIO
 import time
 
 
@@ -136,7 +138,7 @@ FFE_IS_ON_DESK = 1 << 0
 # 
 _MACBINARY_HEADER_MEMBERS = [
     StructMember('old_version', 'unsigned', 1, 0),
-    StructMember('filename', 'pascal_string', 63, None),
+    StructMember('filename', 'pascal_bytes', 63, None),
     StructMember('file_type', 'fixed_string', 4, None),
     StructMember('file_creator', 'fixed_string', 4, None),
     StructMember('finder_flags', 'unsigned', 1, 0),
@@ -166,12 +168,12 @@ _MACBINARY_HEADER_MEMBERS = [
         # Bit 4 - ColorReserved
         # Bits 1-3 - color
         # Bit 0 - isOnDesk
-    StructMember('signature', 'fixed_string', 4, 'mBIN'),
+    StructMember('signature', 'fixed_bytes', 4, b'mBIN'),
     # See SM_* constants for valid values.
     StructMember('filename_script', 'unsigned', 1, SM_ROMAN),
     StructMember('extended_finder_flags', 'unsigned', 1, 0),
         # fdXFlags field of an fxInfo record
-    StructMember('reserved', 'fixed_string', 8, 0),
+    StructMember('reserved', 'fixed_bytes', 8, 0),
     StructMember('reserved_for_unpacked_size', 'unsigned', 4, 0),
     StructMember('reserved_for_second_header_length', 'unsigned', 2, 0),
     StructMember('version', 'unsigned', 1, 130),
@@ -210,13 +212,23 @@ def read_macbinary(input):
 
 
 def _read_macbinary_header(input):
-    return read_structure(input, _MACBINARY_HEADER_MEMBERS)
+    macbinary_header = read_structure(input, _MACBINARY_HEADER_MEMBERS)
+    
+    # Decode the filename to unicode, which might not be MacRoman encoded
+    if macbinary_header['filename_script'] == SM_ROMAN:
+        macbinary_header['filename'] = macbinary_header['filename'].decode('macroman')
+    else:
+        raise NotImplementedError(
+            "Filename is encoded in a script other than MacRoman. " +
+            "Don't know how to decode non-MacRoman scripts.")
+    
+    return macbinary_header
 
 
 def _read_macbinary_section(input, section_type, macbinary_header):
     section_length = macbinary_header[section_type + '_length']
     if section_length == 0:
-        section = ''
+        section = b''
     else:
         section = input.read(section_length)
         _seek_to_next_128_byte_boundary(input)
@@ -233,13 +245,13 @@ def _seek_to_next_128_byte_boundary(input):
 
 def write_macbinary_to_buffer(macbinary):
     """
-    Convenience method that writes a MacBinary file to an in-memory StringIO
+    Convenience method that writes a MacBinary file to an in-memory BytesIO
     buffer and then returns that (rewound) buffer.
     
     Do not use this method for potentially large files, since the entire
     file is buffered in memory.
     """
-    buffer = StringIO()
+    buffer = BytesIO()
     write_macbinary(buffer, macbinary)
     buffer.seek(0)
     return buffer
@@ -251,12 +263,12 @@ def write_macbinary(output, macbinary):
     specified contents.
     
     A MacBinary object is a dictionary of the format:
-    * filename : str-`filename_script`|unicode -- Name of the encoded file.
+    * filename : unicode -- Name of the encoded file.
     * filename_script : unsigned(1) (optional) -- Text encoding of the filename.
     *                                             Defaults to MacRoman (SM_ROMAN).
     *                                             See SM_* constants for other options.
-    * file_type : str(4)-macroman -- Code for the file type.
-    * file_creator : str(4)-macroman -- Code for the file creator.
+    * file_type : unicode(4) -- Code for the file type.
+    * file_creator : unicode(4) -- Code for the file creator.
     * data_fork : str-binary (optional) -- The contents of the data fork.
     * resource_fork : str-binary (optional) -- The contents of the resource fork.
     
@@ -269,7 +281,7 @@ def write_macbinary(output, macbinary):
     * finder_flags : unsigned(1) (optional) -- See FF_* constants.
     * extra_finder_flags : unsigned(1) (optional) -- See FFE_* constants.
     * extended_finder_flags : unsigned(1) (optional) -- fdXFlags field of an fxInfo record.
-    * comment : str-macroman (optional) -- The Finder comment of the file.
+    * comment : unicode (optional) -- The Finder comment of the file.
     * parent_directory_id : unsigned(2) (optional) --
             ID of the directory that originally contained the encoded file.
     * x_position : unsigned(2) (optional) - X position of the encoded file within its parent directory.
@@ -284,8 +296,8 @@ def write_macbinary(output, macbinary):
             'Must explicitly specify a data fork, a resource fork, or both.')
     
     macbinary_header = macbinary
-    data_fork = macbinary.get('data_fork', '')
-    resource_fork = macbinary.get('resource_fork', '')
+    data_fork = macbinary.get('data_fork', b'')
+    resource_fork = macbinary.get('resource_fork', b'')
     comment = macbinary.get('comment', '')
     
     # Fill in header
@@ -304,17 +316,11 @@ def write_macbinary(output, macbinary):
 
 def _write_macbinary_header(output, macbinary_header):
     # Try to convert unicode filenames to MacRoman automatically
-    if isinstance(macbinary_header['filename'], unicode):
-        if macbinary_header.get('filename_script', SM_ROMAN) != SM_ROMAN:
-            raise ValueError(
-                "Explicit filename encoding specified but didn't receive a " +
-                "bytestring filename.")
-        else:
-            unicode_filename = macbinary_header['filename']
-            # NOTE: Can fail with UnicodeEncodeError if filename contains
-            #       characters not representable in MacRoman encoding.
-            macroman_filename = unicode_filename.encode('macroman')
-            macbinary_header['filename'] = macroman_filename
+    if macbinary_header.get('filename_script', SM_ROMAN) != SM_ROMAN:
+        raise NotImplementedError(
+            "Filename script other than MacRoman specified. " +
+            "Don't know how to encode scripts other than MacRoman.")
+    macbinary_header['filename'] = macbinary_header['filename'].encode('macroman')
     
     # If datetime fields not specified, use the current datetime
     if 'created' not in macbinary_header or 'modified' not in macbinary_header:
@@ -356,7 +362,7 @@ def _pad_until_next_128_byte_boundary(output):
     offset_to_next_boundary = 128 - (current_offset % 128)
     if offset_to_next_boundary < 128:
         for i in xrange(offset_to_next_boundary):
-            output.write(chr(0))
+            output.write(NULL_BYTE)
 
 # ------------------------------------------------------------------------------
 
@@ -406,8 +412,8 @@ def _compute_macbinary_crc(data, crc=0):
     """
     Computes a MacBinary II style CRC checksum of the specified data.
     """
-    for c in data:
-        crc ^= ord(c) << 8
+    for b in iterord(data):
+        crc ^= b << 8
         crc = ((crc << 8) ^ _CRC_MAGIC[crc >> 8]) & 0xFFFF
     return crc
 

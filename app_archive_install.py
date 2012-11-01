@@ -94,7 +94,7 @@ def main(args):
                     #       Remembering to do this everywhere could get quite burdensome,
                     #       so I suggest actually converting all true strings to Unicode
                     #       upon input.
-                    print '    %d: %s' % (i, item.name.decode('macroman')); i += 1
+                    print '    %d: %s' % (i, item.name); i += 1
                 print '    %d: <Cancel>' % i; i += 1
                 try:
                     choice = int(raw_input('Choice? '))
