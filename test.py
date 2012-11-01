@@ -30,6 +30,7 @@ from tempfile import NamedTemporaryFile
 import time
 
 from classicbox.io import StringIO
+from classicbox.io import touch_temp
 from contextlib import contextmanager
 import sys
 import traceback
@@ -155,11 +156,10 @@ def test_classicbox_alias_file():
 
 
 def _test_create_alias_file():
-    if not os.path.exists('test_data/generated'):
-        os.mkdir('test_data/generated')
-    
-    source_disk_image_filepath = 'test_data/generated/SourceDisk.dsk'
-    target_disk_image_filepath = 'test_data/generated/TargetDisk.dsk'
+    source_disk_image_filepath = touch_temp(
+        prefix='SourceDisk', suffix='.dsk')
+    target_disk_image_filepath = touch_temp(
+        prefix='TargetDisk', suffix='.dsk')
     
     try:
         # Create empty source disk image
@@ -199,10 +199,8 @@ def test_catalog_create():
 
 
 def _test_catalog_create_output():
-    if not os.path.exists('test_data/generated'):
-        os.mkdir('test_data/generated')
-    
-    disk_image_filepath = 'test_data/generated/Catalog.dsk'
+    disk_image_filepath = touch_temp(
+        prefix='Catalog', suffix='.dsk')
     
     try:
         now = time.time()

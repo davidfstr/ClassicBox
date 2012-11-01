@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 from collections import namedtuple
 from contextlib import contextmanager
+import os
+import tempfile
 
 
 StructMember = namedtuple(
@@ -223,6 +225,22 @@ def write_nulls(output, num_bytes):
     # Write remaining bytes
     for i in xrange(num_bytes):
         output.write(zero_byte)
+
+def touch_temp(*args, **kwargs):
+    """
+    Return an absolute pathname of a file that did not exist at the time the
+    call is made. The arguments are the same as for tempfile.mkstemp().
+    
+    After the call is made, a new file will exist at the returned filepath.
+    The caller is responsible for deleting this file.
+    
+    This is intended to be a secure alternative to tempfile.mktemp(),
+    where the caller really needs a temporary *filepath* as opposed
+    to a file-object.
+    """
+    (fd, filepath) = tempfile.mkstemp(*args, **kwargs)
+    os.close(fd)
+    return filepath
 
 # ------------------------------------------------------------------------------
 # Unicode & Python 3 Shims
