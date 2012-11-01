@@ -29,11 +29,28 @@ Ignore Tree Format:
     * IgnoredDirectory: [filename : unicode, IgnoredDirectoryListing]
 """
 
+from collections import namedtuple
 import json
 import os.path
-import pprint
+from pprint import pprint
 import sys
 
+
+DirectoryListingDiff = namedtuple(
+    'DirectoryListingDiff',
+    ('deletes', 'adds', 'edits'))
+
+FileDiff = namedtuple(
+    'FileDiff',
+    ('name', 'dates'))
+
+DirectoryDiff = namedtuple(
+    'DirectoryDiff',
+    ('name', 'dates', 'listing_diff'))
+
+_EMPTY_DIFF = DirectoryListingDiff([], [], [])
+
+# ------------------------------------------------------------------------------
 
 def main(args):
     if len(args) > 0 and args[0] == '--pretty':
@@ -60,7 +77,7 @@ def main(args):
     with open(catalog2_filepath, 'rt') as catalog2_file:
         catalog2 = json.loads(catalog2_file.read())
     
-    catalog_diff = diff_tree(catalog1, catalog2)
+    catalog_diff = create_catalog_diff(catalog1, catalog2)
     
     # If an ignore tree is specified, remove elements from the diff
     # that the tree matches.
@@ -69,17 +86,20 @@ def main(args):
         with open(ignore_tree_filepath, 'rt') as ignore_tree_file:
             ignore_tree = json.loads(ignore_tree_file.read())
         
-        remove_ignored_diff_parts(catalog_diff, ignore_tree)
+        remove_ignored_parts_from_catalog_diff(catalog_diff, ignore_tree)
     
     if pretty:
-        pprint.pprint(catalog_diff)
+        print_catalog_diff()
     else:
         print json.dumps(catalog_diff, ensure_ascii=True)
 
+# ------------------------------------------------------------------------------
 
-EMPTY_DIFF = ([], [], [])
+def create_catalog_diff(catalog1, catalog2):
+    return _diff_tree(catalog1, catalog2)
 
-def diff_tree(tree1, tree2):
+
+def _diff_tree(tree1, tree2):
     # For files, determine (+) add, (-) delete, (%) edit
     # For directories, determine (+) add, (-) delete, (%) edit
     
@@ -134,7 +154,7 @@ def diff_tree(tree1, tree2):
         date2 = name_to_date2[name]
         
         if date1 != date2:
-            edits.append((name, (date1, date2)))
+            edits.append(FileDiff(name, (date1, date2)))
     
     shared_dirs = dirs1 & dirs2
     for name in shared_dirs:
@@ -143,16 +163,20 @@ def diff_tree(tree1, tree2):
         descendants1 = name_to_descendants1[name]
         descendants2 = name_to_descendants2[name]
         
-        descendants_diff = diff_tree(descendants1, descendants2)
-        if date1 != date2 or descendants_diff != EMPTY_DIFF:
-            edits.append((name, (date1, date2), descendants_diff))
+        descendants_diff = _diff_tree(descendants1, descendants2)
+        if date1 != date2 or descendants_diff != _EMPTY_DIFF:
+            edits.append(DirectoryDiff(name, (date1, date2), descendants_diff))
     
     edits = sorted(edits)
     
-    return (deletes, adds, edits)
+    return DirectoryListingDiff(deletes, adds, edits)
 
 
-def remove_ignored_diff_parts(diff, ignored_tree):
+def remove_ignored_parts_from_catalog_diff(catalog_diff, ignored_tree):
+    _remove_ignored_diff_parts(catalog_diff, ignored_tree)
+
+
+def _remove_ignored_diff_parts(diff, ignored_tree):
     """
     Removes the parts of `diff` that occur in `ignored_tree`,
     modifying it in place.
@@ -187,16 +211,25 @@ def remove_ignored_diff_parts(diff, ignored_tree):
                 if type(ignored_dir) == list:   # is directory?
                     (ignored_name, ignored_descendants) = ignored_dir
                     if cur_edit_name == ignored_name:
-                        remove_ignored_diff_parts(cur_edit_descendants, ignored_descendants)
+                        _remove_ignored_diff_parts(cur_edit_descendants, ignored_descendants)
             
             # Everything inside this directory was ignored, so mark the
             # directory itself as ignored
-            if cur_edit_descendants == EMPTY_DIFF:
+            if cur_edit_descendants == _EMPTY_DIFF:
                 del edits[i]
                 continue
         
         i += 1
 
+
+def print_catalog_diff(catalog_diff):
+    pprint(_strip_to_json(catalog_diff))
+
+
+def _strip_to_json(obj):
+    return json.loads(json.dumps(obj))
+
+# ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -10,6 +10,10 @@ Syntax:
 # TODO: Extract common functionality to classicbox.box
 import box_up
 
+# TODO: Extract common functionality to classicbox.catalog
+from catalog_create import create_catalog
+from catalog_diff import create_catalog_diff
+
 from classicbox.alias.file import create_alias_file
 from classicbox.archive import archive_extract
 from classicbox.disk import is_basilisk_supported_disk_image
@@ -114,10 +118,20 @@ def main(args):
                 box_dirpath,
                 primary_disk_image_filepath, [primary_installer_app_item.name])
             
+            # Remember state of boot volume prior to installation
+            boot_disk_image_filepath = locate_boot_volume_of_box(box_dirpath)
+            preinstall_catalog = create_catalog(boot_disk_image_filepath)
+            
             # Boot the box and wait for the user to install the app
             run_box(box_dirpath)
             
+            # Detect changes on the boot volume since installation
+            postinstall_catalog = create_catalog(boot_disk_image_filepath)
+            install_diff = create_catalog_diff(preinstall_catalog, postinstall_catalog)
+            
             # Look for the installed app and set it as the boot app
+            from catalog_diff import print_catalog_diff
+            print_catalog_diff(install_diff)
             raise NotImplementedError
     
     pass
