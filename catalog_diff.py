@@ -55,9 +55,9 @@ def main(args):
         sys.exit('file not found: %s' % catalog2_filepath)
         return
     
-    with open(catalog1_filepath, 'rb') as catalog1_file:
+    with open(catalog1_filepath, 'rt') as catalog1_file:
         catalog1 = json.loads(catalog1_file.read())
-    with open(catalog2_filepath, 'rb') as catalog2_file:
+    with open(catalog2_filepath, 'rt') as catalog2_file:
         catalog2 = json.loads(catalog2_file.read())
     
     catalog_diff = diff_tree(catalog1, catalog2)
@@ -66,7 +66,7 @@ def main(args):
     # that the tree matches.
     if len(args) == 3:
         ignore_tree_filepath = args[2]
-        with open(ignore_tree_filepath, 'rb') as ignore_tree_file:
+        with open(ignore_tree_filepath, 'rt') as ignore_tree_file:
             ignore_tree = json.loads(ignore_tree_file.read())
         
         remove_ignored_diff_parts(catalog_diff, ignore_tree)

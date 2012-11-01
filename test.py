@@ -342,11 +342,11 @@ def _test_catalog_diff_directory_becomes_file():
 
 
 def _ensure_catalog_diff_matches(catalog1, catalog2, expected_output):
-    with NamedTemporaryFile(mode='wb', delete=True) as catalog1_file:
+    with NamedTemporaryFile(mode='wt', delete=True) as catalog1_file:
         json.dump(catalog1, catalog1_file)
         catalog1_file.flush()
         
-        with NamedTemporaryFile(mode='wb', delete=True) as catalog2_file:
+        with NamedTemporaryFile(mode='wt', delete=True) as catalog2_file:
             json.dump(catalog2, catalog2_file)
             catalog2_file.flush()
             
