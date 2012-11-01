@@ -245,18 +245,28 @@ def touch_temp(*args, **kwargs):
 # ------------------------------------------------------------------------------
 # Unicode & Python 3 Shims
 
-# Declare BytesIO class, which will be important when migrating to Python 3
+# BytesIO presents a stream interface to an in-memory bytestring.
+# 
+# This is equivalent to StringIO in Python 2 and to BytesIO in Python 3.
 try:
     from io import BytesIO              # Python 3
 except ImportError:
     from StringIO import StringIO as BytesIO
 
-# Declare StringIO class, which will be important when migrating to Python 3
+# StringIO presents a stream interface to an in-memory string
+# (which is a bytestring in Python 2 and a unicode string in Python 3).
+# 
+# This is equivalent to StringIO in both Python 2 and 3.
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO             # Python 3
 
+# bchr() converts the specified byte integer value to a single character
+# bytestring.
+# 
+# This is equivalent to chr() in Python 2 but requires special handling in
+# Python 3.
 if bytes == str:
     def bchr(byte_ordinal):
         return chr(byte_ordinal)
@@ -266,11 +276,12 @@ else:
 
 NULL_BYTE = bchr(0)
 
+# iterord() iterates over the integer values of the bytes in the specified
+# bytestring.
 if bytes == str:
-    def iterord(bytes_value):
+    def iterord(bytes_value):           # Python 2
         for b in bytes_value:
             yield ord(b)
 else:
-    # Python 3
-    def iterord(bytes_value):
+    def iterord(bytes_value):           # Python 3
         return bytes_value
