@@ -69,7 +69,7 @@ def list_descendants(parent_dirpath):
         if item.is_file:
             tree.append((item.name, item.date_modified))
         else:
-            descendants = list_descendants(parent_dirpath + item.name + u':')
+            descendants = list_descendants(parent_dirpath + item.name + ':')
             tree.append((item.name, item.date_modified, descendants))
     
     return tree

@@ -112,7 +112,7 @@ def hfs_ls(macdirpath=None, _stat_path=False):
     
     Arguments:
     * macdirpath : unicode -- An absolute MacOS path.
-                              For example u'Boot:' or u'Boot:System Folder'.
+                              For example 'Boot:' or 'Boot:System Folder'.
     
     Returns a list of HFSItems.
     """
@@ -135,7 +135,7 @@ def hfs_stat(macitempath):
     
     Arguments:
     * macitempath : unicode -- An absolute MacOS path.
-                               For example u'Boot:' or u'Boot:System Folder'.
+                               For example 'Boot:' or 'Boot:System Folder'.
     
     Returns an HFSItem.
     """
@@ -168,7 +168,7 @@ def _parse_hdir_line(line):
         (id, num_children, date_modified, name) = dir_matcher.groups()
         return HFSItem(
             int(id), name.decode('macroman'), False,
-            4*u' ', 4*u' ',
+            4*' ', 4*' ',
             0, 0, date_modified.decode('ascii'))
     
     raise ValueError('Unable to parse hdir output line: %s' % line)
@@ -299,24 +299,24 @@ def hfspath_dirpath(itempath):
     Note that the semantics are similar to but not the same as `os.path.dirname`.
     
     Examples:
-    * hfspath_dirpath(u'Boot:') -> None
-    * hfspath_dirpath(u'Boot:System Folder') -> u'Boot:'
-    * hfspath_dirpath(u'Boot:System Folder:Preferences') -> u'Boot:System Folder'
+    * hfspath_dirpath('Boot:') -> None
+    * hfspath_dirpath('Boot:System Folder') -> 'Boot:'
+    * hfspath_dirpath('Boot:System Folder:Preferences') -> 'Boot:System Folder'
     
     Arguments:
     * itempath -- An absolute MacOS path.
-                  For example u'Boot:' or u'Boot:System Folder'.
+                  For example 'Boot:' or 'Boot:System Folder'.
     """
     
     itempath = hfspath_normpath(itempath)
-    if itempath.endswith(u':'):
+    if itempath.endswith(':'):
         # Item is a volume and has no parent directory
         return None
     
-    parent_path = itempath.rsplit(u':', 1)[0]
-    if u':' not in parent_path:
+    parent_path = itempath.rsplit(':', 1)[0]
+    if ':' not in parent_path:
         # Parent is a volume
-        return parent_path + u':'
+        return parent_path + ':'
     else:
         # Parent is a directory
         return parent_path
@@ -329,19 +329,19 @@ def hfspath_itemname(itempath):
     Note that the semantics are similar to but not the same as `os.path.basename`.
     
     Examples:
-    * hfspath_itemname(u'Boot:') -> u'Boot'
-    * hfspath_itemname(u'Boot:System Folder') -> u'System Folder'
-    * hfspath_itemname(u'Boot:System Folder:') -> u'System Folder'
-    * hfspath_itemname(u'Boot:SimpleText') -> u'SimpleText'
+    * hfspath_itemname('Boot:') -> 'Boot'
+    * hfspath_itemname('Boot:System Folder') -> 'System Folder'
+    * hfspath_itemname('Boot:System Folder:') -> 'System Folder'
+    * hfspath_itemname('Boot:SimpleText') -> 'SimpleText'
     
     Arguments:
     * itempath -- An absolute MacOS path.
-                  For example u'Boot:' or u'Boot:System Folder'.
+                  For example 'Boot:' or 'Boot:System Folder'.
     """
     
-    if itempath.endswith(u':'):
+    if itempath.endswith(':'):
         itempath = itempath[:-1]
-    return itempath.rsplit(u':', 1)[-1]
+    return itempath.rsplit(':', 1)[-1]
 
 
 def hfspath_normpath(itempath):
@@ -352,18 +352,18 @@ def hfspath_normpath(itempath):
     a volume.
     
     Examples:
-    * hfspath_normpath(u'Boot:') -> u'Boot:'
-    * hfspath_normpath(u'Boot:System Folder') -> u'Boot:System Folder'
-    * hfspath_normpath(u'Boot:System Folder:') -> u'Boot:System Folder'
-    * hfspath_normpath(u'Boot:SimpleText') -> u'Boot:SimpleText'
+    * hfspath_normpath('Boot:') -> 'Boot:'
+    * hfspath_normpath('Boot:System Folder') -> 'Boot:System Folder'
+    * hfspath_normpath('Boot:System Folder:') -> 'Boot:System Folder'
+    * hfspath_normpath('Boot:SimpleText') -> 'Boot:SimpleText'
     
     Arguments:
     * itempath -- An absolute MacOS path.
-    *             For example u'Boot:' or u'Boot:System Folder'.
+    *             For example 'Boot:' or 'Boot:System Folder'.
     """
     
-    if itempath.endswith(u':'):
-        if itempath.index(u':') == len(itempath) - 1:
+    if itempath.endswith(':'):
+        if itempath.index(':') == len(itempath) - 1:
             # Refers to a volume
             return itempath
         else:

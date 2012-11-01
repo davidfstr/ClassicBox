@@ -91,9 +91,9 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
     
     # Compute alias resource info
     alias_resource_info = {
-        'type': u'alis',
+        'type': 'alis',
         'id': 0,
-        'name': target_item_info.name + u' alias',
+        'name': target_item_info.name + ' alias',
         'attributes': 0
     }
     
@@ -120,7 +120,7 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         'alias_file_finder_flags': FF_IS_ALIAS
     }
     
-    target_is_volume = target_macitempath.endswith(u':')
+    target_is_volume = target_macitempath.endswith(':')
     if target_is_volume:
         # Target is volume
         
@@ -150,8 +150,8 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
         })
         
         alias_file_info.update({
-            'alias_file_type': u'hdsk',
-            'alias_file_creator': u'MACS',
+            'alias_file_type': 'hdsk',
+            'alias_file_creator': 'MACS',
         })
         
     else:
@@ -181,10 +181,10 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
                 'file_creator': target_item_info.creator,
             })
             
-            if target_item_info.type == u'APPL':
+            if target_item_info.type == 'APPL':
                 # Target is application file
                 alias_file_info.update({
-                    'alias_file_type': u'adrp',
+                    'alias_file_type': 'adrp',
                     'alias_file_creator': target_item_info.creator,
                 })
                 
@@ -214,8 +214,8 @@ def create_alias_info_for_item_on_disk_image(disk_image_filepath, target_macitem
                 #       implementation does) results in an alias that works,
                 #       but that will initially have a generic folder icon
                 #       until the alias is opened.
-                'alias_file_type': u'fdrp',
-                'alias_file_creator': u'MACS',
+                'alias_file_type': 'fdrp',
+                'alias_file_creator': 'MACS',
             })
     
     return {

@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile
 
 
 RECOGNIZED_INSTALLER_APP_CREATORS = [
-    u'STi0',         # Stuffit InstallerMaker
+    'STi0',         # Stuffit InstallerMaker
     # TODO: What about InstallerVISE?
 ]
 
@@ -70,7 +70,7 @@ def main(args):
         # Look for installer apps
         installer_app_items = []
         for item in root_items:
-            if item.type == u'APPL' and item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
+            if item.type == 'APPL' and item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
                 installer_app_items.append(item)
         
         # Identify the primary installer app
