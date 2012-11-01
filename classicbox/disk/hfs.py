@@ -40,10 +40,10 @@ HFSItem = namedtuple(
     ('id', 'name', 'is_file', 'type', 'creator', 'data_size', 'rsrc_size', 'date_modified'))
 
 
-_HMOUNT_VOLUME_NAME_RE = re.compile(r'^Volume name is "(.*)"$')
-_HMOUNT_CREATED_RE =     re.compile(r'^Volume was created on (.*)$')
-_HMOUNT_MODIFIED_RE =    re.compile(r'^Volume was last modified on (.*)$')
-_HMOUNT_BYTES_FREE_RE =  re.compile(r'^Volume has ([0-9]+) bytes free$')
+_HMOUNT_VOLUME_NAME_RE = re.compile(br'^Volume name is "(.*)"$')
+_HMOUNT_CREATED_RE =     re.compile(br'^Volume was created on (.*)$')
+_HMOUNT_MODIFIED_RE =    re.compile(br'^Volume was last modified on (.*)$')
+_HMOUNT_BYTES_FREE_RE =  re.compile(br'^Volume has ([0-9]+) bytes free$')
 
 def hfs_mount(disk_image_filepath):
     """
@@ -145,8 +145,8 @@ def hfs_stat(macitempath):
     return item_with_path_as_name._replace(name=itemname)
 
 
-_FILE_LINE_RE = re.compile(r'^ *([0-9]+) f  (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)$')
-_DIR_LINE_RE =  re.compile(r'^ *([0-9]+) d +([0-9]+) items? +([^ ]...........) (.+)$')
+_FILE_LINE_RE = re.compile(br'^ *([0-9]+) f  (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)$')
+_DIR_LINE_RE =  re.compile(br'^ *([0-9]+) d +([0-9]+) items? +([^ ]...........) (.+)$')
 
 def _parse_hdir_line(line):
     """
