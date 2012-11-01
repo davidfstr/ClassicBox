@@ -89,11 +89,6 @@ def main(args):
                 print 'Please choose the primary installer for this program:'
                 i = 1
                 for item in installer_app_items:
-                    # TODO: It looks like I need to be very careful about printing
-                    #       any str-macroman types I receive from lower level functions.
-                    #       Remembering to do this everywhere could get quite burdensome,
-                    #       so I suggest actually converting all true strings to Unicode
-                    #       upon input.
                     print '    %d: %s' % (i, item.name); i += 1
                 print '    %d: <Cancel>' % i; i += 1
                 try:

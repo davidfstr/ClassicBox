@@ -21,7 +21,6 @@ Catalog Format:
 
 from classicbox.disk.hfs import hfs_ls
 from classicbox.disk.hfs import hfs_mount
-from classicbox.disk.hfs import hfs_pwd
 import json
 import os.path
 import pprint
@@ -44,7 +43,7 @@ def main(args):
         sys.exit('file not found: %s' % dsk_filepath)
         return
     
-    catalog = scan_disk_contents(dsk_filepath)
+    catalog = create_catalog(dsk_filepath)
     
     if pretty:
         pprint.pprint(catalog)
@@ -52,24 +51,23 @@ def main(args):
         print json.dumps(catalog, ensure_ascii=True)
 
 
-def scan_disk_contents(dsk_filepath):
+def create_catalog(dsk_filepath):
     # NOTE: Will fail if the specified file is not an HFS Standard disk image
-    hfs_mount(dsk_filepath)
-    
-    volume_dirpath = hfs_pwd()
-    volume_name = volume_dirpath[:-1]   # chop trailing ':'
+    volume_info = hfs_mount(dsk_filepath)
+    volume_name = volume_info['name']
+    volume_dirpath = volume_name + ':'
     
     # NOTE: Constructs entire disk catalog in memory, which could be large.
-    return list_descendants(volume_dirpath)
+    return _list_descendants(volume_dirpath)
 
 
-def list_descendants(parent_dirpath):
+def _list_descendants(parent_dirpath):
     tree = []
     for item in hfs_ls(parent_dirpath):
         if item.is_file:
             tree.append((item.name, item.date_modified))
         else:
-            descendants = list_descendants(parent_dirpath + item.name + ':')
+            descendants = _list_descendants(parent_dirpath + item.name + ':')
             tree.append((item.name, item.date_modified, descendants))
     
     return tree

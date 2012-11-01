@@ -91,18 +91,6 @@ def hfs_mount(disk_image_filepath):
     return volume_info
 
 
-# TODO: Remove. This method does not make sense since I am not
-#       going to allow the user to change the hfsutils current directory.
-def hfs_pwd():
-    """
-    Returns the absolute MacOS path to the current working directory of the mounted HFS volume.
-    
-    MacOS paths are bytestrings encoded in MacRoman, with colon (:) as the path
-    component separator. For example: "Macintosh HD:System Folder:".
-    """
-    return subprocess.check_output(['hpwd'], stderr=DEVNULL)[:-1].decode('macroman')
-
-
 def hfs_ls(macdirpath=None, _stat_path=False):
     """
     Lists the specified directory on the mounted HFS volume,
