@@ -5,6 +5,7 @@ Manipulates MacBinary files.
 from __future__ import absolute_import
 
 from classicbox.io import BytesIO
+from classicbox.io import iterord
 from classicbox.io import NULL_BYTE
 from classicbox.io import offset_to_structure_member
 from classicbox.io import print_structure
@@ -411,8 +412,8 @@ def _compute_macbinary_crc(data, crc=0):
     """
     Computes a MacBinary II style CRC checksum of the specified data.
     """
-    for c in data:
-        crc ^= ord(c) << 8
+    for b in iterord(data):
+        crc ^= b << 8
         crc = ((crc << 8) ^ _CRC_MAGIC[crc >> 8]) & 0xFFFF
     return crc
 

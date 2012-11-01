@@ -247,3 +247,12 @@ else:
         return bytes([byte_ordinal])    # Python 3
 
 NULL_BYTE = bchr(0)
+
+if bytes == str:
+    def iterord(bytes_value):
+        for b in bytes_value:
+            yield ord(b)
+else:
+    # Python 3
+    def iterord(bytes_value):
+        return bytes_value
