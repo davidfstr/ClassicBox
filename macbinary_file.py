@@ -55,7 +55,7 @@ def main(args):
             'filename': 'Greetings.txt',
             'file_type': 'TEXT',
             'file_creator': 'ttxt',
-            'data_fork': 'Hello World!',
+            'data_fork': b'Hello World!',
         })
     
     else:
