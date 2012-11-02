@@ -13,7 +13,10 @@ import box_up
 # TODO: Extract common functionality to classicbox.catalog
 from catalog_create import create_catalog
 from catalog_diff import create_catalog_diff
+from catalog_diff import DirectoryDiff
 from catalog_diff import EMPTY_DIFF
+from catalog_diff import FileDiff
+from catalog_diff import print_catalog_diff
 from catalog_diff import remove_ignored_parts_from_catalog_diff
 
 from classicbox.alias.file import create_alias_file
@@ -24,6 +27,7 @@ from classicbox.disk.hfs import hfs_delete
 from classicbox.disk.hfs import hfs_exists
 from classicbox.disk.hfs import hfs_ls
 from classicbox.disk.hfs import hfs_mount
+from classicbox.disk.hfs import hfs_stat
 from contextlib import contextmanager
 import os
 import os.path
@@ -61,6 +65,7 @@ OS_7_5_3_IGNORE_TREE = [
 ]
 
 
+VERBOSE_CATALOG_DIFF = True
 
 def main(args):
     # Parse arguments
@@ -113,7 +118,6 @@ def main(args):
             primary_installer_app_item = installer_app_items[0]
             
         elif len(installer_app_items) >= 2:
-            # TODO: Extract to method
             print 'Found multiple installer applications.'
             while True:
                 print
@@ -145,7 +149,8 @@ def main(args):
             # Set the installer app as the boot app
             set_boot_app_of_box(
                 box_dirpath,
-                primary_disk_image_filepath, [primary_installer_app_item.name])
+                primary_disk_image_filepath,
+                [primary_installer_app_item.name])
             
             while True:
                 # Remember state of boot volume prior to installation
@@ -185,14 +190,39 @@ def main(args):
                     else:           # Cancel
                         return
                 
-                # Look for the installed app and set it as the boot app
-                from catalog_diff import print_catalog_diff
-                print_catalog_diff(install_diff)
-                raise NotImplementedError
+                if VERBOSE_CATALOG_DIFF:
+                    print_catalog_diff(install_diff)
+                    print
                 
+                # Look for the installed app
+                installed_apps = []
+                for (item, itempath_components) in \
+                        walk_added_files_in_catalog_diff(
+                            install_diff, boot_disk_image_filepath):
+                    if item.type == 'APPL':
+                        installed_apps.append(itempath_components)
+                
+                if len(installed_apps) == 0:
+                    # TODO: Offer to run the installer again or cancel
+                    raise NotImplementedError
+                elif len(installed_apps) == 1:
+                    installed_app_filepath_components = installed_apps[0]
+                elif len(installed_apps) >= 2:
+                    # TODO: Ask the user which app is the installed app
+                    raise NotImplementedError
+                
+                # (Found the installed app)
                 break
+            
+            # (Unmount the archive's disk images since installation is done)
+        
+        # (Close the archive since installation is done)
     
-    pass
+    # Set the installed app as the boot app
+    set_boot_app_of_box(
+        box_dirpath,
+        boot_disk_image_filepath,
+        installed_app_filepath_components)
 
 
 @contextmanager
@@ -231,11 +261,61 @@ def _mktemp_dammit(*args, **kwargs):
     return temp_filepath
 
 
+def walk_added_files_in_catalog_diff(diff, disk_image_filepath):
+    for x in _walk_added_files_in_diff(diff, disk_image_filepath, ()):
+        yield x
+
+def _walk_added_files_in_diff(
+        diff, disk_image_filepath, parent_dirpath_components):
+    
+    for add in diff.adds:
+        for x in walk_files(
+                disk_image_filepath,
+                parent_dirpath_components + (add,)):
+            yield x
+    
+    for edit in diff.edits:
+        if isinstance(edit, FileDiff):
+            edit_itempath_components = (parent_dirpath_components + (edit.name,))
+            edit_item = hfs2_stat(disk_image_filepath, edit_itempath_components)
+            yield (edit_item, edit_itempath_components)
+        elif isinstance(edit, DirectoryDiff):
+            for x in _walk_added_files_in_diff(
+                    edit.listing_diff,
+                    disk_image_filepath,
+                    parent_dirpath_components + (edit.name,)):
+                yield x
+        else:
+            raise ValueError
+
+
+def walk_files(disk_image_filepath, top_itempath_components):
+    top_item = hfs2_stat(disk_image_filepath, top_itempath_components)
+    if top_item.is_file:
+        yield (top_item, top_itempath_components)
+    else:
+        for x in _walk_files_in_directory(
+                disk_image_filepath, top_itempath_components):
+            yield x
+
+
+def _walk_files_in_directory(disk_image_filepath, parent_dirpath_components):
+    for item in hfs2_ls(disk_image_filepath, parent_dirpath_components):
+        if item.is_file:
+            yield (item, parent_dirpath_components + (item.name,))
+        else:
+            for x in _walk_files_in_directory(
+                    disk_image_filepath,
+                    parent_dirpath_components + (item.name,)):
+                yield x
+
+# ------------------------------------------------------------------------------
+
 def set_boot_app_of_box(box_dirpath, disk_image_filepath, app_filepath_components):
     install_autoquit_in_box(box_dirpath)
     set_autoquit_app(box_dirpath, disk_image_filepath, app_filepath_components)
 
-# ------------------------------------------------------------------------------
+#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # install_autoquit_in_box
 
 def install_autoquit_in_box(box_dirpath):
@@ -293,7 +373,7 @@ def volumes_of_box(box_dirpath):
             if is_basilisk_supported_disk_image(file):
                 yield os.path.join(root, file)
 
-# ------------------------------------------------------------------------------
+#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # set_autoquit_app
 
 def set_autoquit_app(box_dirpath, disk_image_filepath, app_filepath_components):
@@ -349,6 +429,16 @@ def hfs2_delete(disk_image_filepath, itempath_components):
 def hfs2_delete_if_exists(disk_image_filepath, itempath_components):
     if hfs2_exists(disk_image_filepath, itempath_components):
         hfs2_delete(disk_image_filepath, itempath_components)
+
+
+def hfs2_ls(disk_image_filepath, itempath_components):
+    macitempath = _mount_disk_image_and_resolve_path(disk_image_filepath, itempath_components)
+    return hfs_ls(macitempath)
+
+
+def hfs2_stat(disk_image_filepath, itempath_components):
+    macitempath = _mount_disk_image_and_resolve_path(disk_image_filepath, itempath_components)
+    return hfs_stat(macitempath)
 
 
 def _mount_disk_image_and_resolve_path(disk_image_filepath, itempath_components):
