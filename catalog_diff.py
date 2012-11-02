@@ -48,7 +48,7 @@ DirectoryDiff = namedtuple(
     'DirectoryDiff',
     ('name', 'dates', 'listing_diff'))
 
-_EMPTY_DIFF = DirectoryListingDiff([], [], [])
+EMPTY_DIFF = DirectoryListingDiff([], [], [])
 
 # ------------------------------------------------------------------------------
 
@@ -164,7 +164,7 @@ def _diff_tree(tree1, tree2):
         descendants2 = name_to_descendants2[name]
         
         descendants_diff = _diff_tree(descendants1, descendants2)
-        if date1 != date2 or descendants_diff != _EMPTY_DIFF:
+        if date1 != date2 or descendants_diff != EMPTY_DIFF:
             edits.append(DirectoryDiff(name, (date1, date2), descendants_diff))
     
     edits = sorted(edits)
@@ -215,7 +215,7 @@ def _remove_ignored_diff_parts(diff, ignored_tree):
             
             # Everything inside this directory was ignored, so mark the
             # directory itself as ignored
-            if cur_edit_descendants == _EMPTY_DIFF:
+            if cur_edit_descendants == EMPTY_DIFF:
                 del edits[i]
                 continue
         

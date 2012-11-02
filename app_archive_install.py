@@ -13,6 +13,8 @@ import box_up
 # TODO: Extract common functionality to classicbox.catalog
 from catalog_create import create_catalog
 from catalog_diff import create_catalog_diff
+from catalog_diff import EMPTY_DIFF
+from catalog_diff import remove_ignored_parts_from_catalog_diff
 
 from classicbox.alias.file import create_alias_file
 from classicbox.archive import archive_extract
@@ -33,6 +35,31 @@ RECOGNIZED_INSTALLER_APP_CREATORS = [
     'STi0',         # Stuffit InstallerMaker
     # TODO: What about InstallerVISE?
 ]
+
+OS_7_5_3_IGNORE_TREE = [
+    ["System Folder", [
+        ["Apple Menu Items", [
+            "Recent Applications"
+        ]],
+        ["Control Panels", [
+            "Apple Menu Options",
+            "MacTCP"
+        ]],
+        ["Extensions", [
+            "Printer Share"
+        ]],
+        "MacTCP DNR",
+        ["Preferences", [
+            "ASLM Preferences",
+            "Apple Menu Options Prefs",
+            "Finder Preferences",
+            "Macintosh Easy Open Preferences",
+            "Users & Groups Data File",
+            "WindowShade Preferences"
+        ]]
+    ]]
+]
+
 
 
 def main(args):
@@ -94,21 +121,23 @@ def main(args):
                 i = 1
                 for item in installer_app_items:
                     print '    %d: %s' % (i, item.name); i += 1
-                print '    %d: <Cancel>' % i; i += 1
+                print '    %d: <Cancel>' % i;
                 try:
                     choice = int(raw_input('Choice? '))
-                    if choice >= i:
-                        raise ValueError
-                    if choice == (i - 1):
-                        # Cancel
-                        return
-                    else:
-                        primary_installer_app_item = installer_app_items[choice - 1]
+                    if 1 <= choice <= i:
                         break
+                    else:
+                        raise ValueError
                 except ValueError:
                     print 'Not a valid choice.'
                     continue
             print
+            
+            if choice == i:
+                # Cancel
+                return
+            else:
+                primary_installer_app_item = installer_app_items[choice - 1]
         
         # Temporarily mount the disk images inside the VM
         with mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):
@@ -118,21 +147,50 @@ def main(args):
                 box_dirpath,
                 primary_disk_image_filepath, [primary_installer_app_item.name])
             
-            # Remember state of boot volume prior to installation
-            boot_disk_image_filepath = locate_boot_volume_of_box(box_dirpath)
-            preinstall_catalog = create_catalog(boot_disk_image_filepath)
-            
-            # Boot the box and wait for the user to install the app
-            run_box(box_dirpath)
-            
-            # Detect changes on the boot volume since installation
-            postinstall_catalog = create_catalog(boot_disk_image_filepath)
-            install_diff = create_catalog_diff(preinstall_catalog, postinstall_catalog)
-            
-            # Look for the installed app and set it as the boot app
-            from catalog_diff import print_catalog_diff
-            print_catalog_diff(install_diff)
-            raise NotImplementedError
+            while True:
+                # Remember state of boot volume prior to installation
+                boot_disk_image_filepath = locate_boot_volume_of_box(box_dirpath)
+                preinstall_catalog = create_catalog(boot_disk_image_filepath)
+                
+                # Boot the box and wait for the user to install the app
+                run_box(box_dirpath)
+                
+                # Detect changes on the boot volume since installation
+                postinstall_catalog = create_catalog(boot_disk_image_filepath)
+                install_diff = create_catalog_diff(preinstall_catalog, postinstall_catalog)
+                remove_ignored_parts_from_catalog_diff(
+                    install_diff,
+                    OS_7_5_3_IGNORE_TREE)
+                
+                # If the user didn't appear to install anything,
+                # provide the option to try again
+                if install_diff == EMPTY_DIFF:
+                    print "It appears you didn't install anything."
+                    print '    1: Try Again'
+                    print '    2: Cancel'
+                    while True:
+                        try:
+                            choice = int(raw_input('Choice? '))
+                            if 1 <= choice <= 2:
+                                break
+                            else:
+                                raise ValueError
+                        except ValueError:
+                            print 'Not a valid choice.'
+                            continue
+                    print
+                    
+                    if choice == 1: # Try Again
+                        continue
+                    else:           # Cancel
+                        return
+                
+                # Look for the installed app and set it as the boot app
+                from catalog_diff import print_catalog_diff
+                print_catalog_diff(install_diff)
+                raise NotImplementedError
+                
+                break
     
     pass
 
