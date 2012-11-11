@@ -133,8 +133,8 @@ def hfs_stat(macitempath):
     return item_with_path_as_name._replace(name=itemname)
 
 
-_FILE_LINE_RE = re.compile(br'^ *([0-9]+) f  (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)$')
-_DIR_LINE_RE =  re.compile(br'^ *([0-9]+) d +([0-9]+) items? +([^ ]...........) (.+)$')
+_FILE_LINE_RE = re.compile(br'^ *([0-9]+) [fF][ i] (....)/(....) +([0-9]+) +([0-9]+) ([^ ]...........) (.+)$')
+_DIR_LINE_RE =  re.compile(br'^ *([0-9]+) [dd][ i] +([0-9]+) items? +([^ ]...........) (.+)$')
 
 def _parse_hdir_line(line):
     """

@@ -39,6 +39,7 @@ RECOGNIZED_INSTALLER_APP_CREATORS = [
     'STi0',         # Stuffit InstallerMaker
     'bbkr',         # Apple Installer
     'VIS3',         # InstallerVISE
+    'EXTR',         # CompactPro AutoExtractor Self-Extracting Archive
 ]
 
 OS_7_5_3_IGNORE_TREE = [
@@ -125,9 +126,9 @@ def main(args):
         # Identify the primary installer app
         if len(installer_app_items) == 0:
             if len(app_creators) == 0:
-                details = '(Did not find any applications.)'
+                details = 'Did not find any applications.'
             else:
-                details = '(However applications of type %s were found.)' % \
+                details = 'However applications of type %s were found.' % \
                     repr(app_creators)
             
             # TODO: Continue looking for the designated app...
