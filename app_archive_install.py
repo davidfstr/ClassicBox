@@ -38,7 +38,7 @@ from tempfile import NamedTemporaryFile
 RECOGNIZED_INSTALLER_APP_CREATORS = [
     'STi0',         # Stuffit InstallerMaker
     'bbkr',         # Apple Installer
-    # TODO: What about InstallerVISE?
+    'VIS3',         # InstallerVISE
 ]
 
 OS_7_5_3_IGNORE_TREE = [
@@ -205,8 +205,18 @@ def main(args):
                 elif len(installed_apps) == 1:
                     installed_app_filepath_components = installed_apps[0]
                 elif len(installed_apps) >= 2:
-                    # TODO: Ask the user which app is the installed app
-                    raise NotImplementedError
+                    choice = choose_from_menu(
+                        'Multiple applications were installed.',
+                        'Please choose the primary application:',
+                        [components[-1] for components in installed_apps] + \
+                            ['<Cancel>'])
+                    
+                    if choice == len(installed_apps):
+                        # Cancel
+                        return
+                    else:
+                        installed_app_filepath_components = \
+                            installed_apps[choice]
                 
                 # (Found the installed app)
                 break
