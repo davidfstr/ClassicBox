@@ -37,6 +37,7 @@ from tempfile import NamedTemporaryFile
 
 RECOGNIZED_INSTALLER_APP_CREATORS = [
     'STi0',         # Stuffit InstallerMaker
+    'bbkr',         # Apple Installer
     # TODO: What about InstallerVISE?
 ]
 
@@ -93,9 +94,17 @@ def main(args):
             primary_disk_image_filepath = disk_image_filepaths[0]
             
         elif len(disk_image_filepaths) >= 2:
-            # TODO: Probably want to ask the user to select one of the disk
-            #       images as the primary disk image.
-            raise NotImplementedError('Found multiple disk images in archive. Not sure what to do.')
+            choice = choose_from_menu(
+                'Found multiple disk images in archive.',
+                'Please choose the primary disk image containing the program or installer:',
+                [os.path.basename(path) for path in disk_image_filepaths] + [
+                    '<Cancel>'])
+            
+            if choice == len(disk_image_filepaths):
+                # Cancel
+                return
+            else:
+                primary_disk_image_filepath = disk_image_filepaths[choice]
         
         # Open the primary disk image
         hfs_mount(primary_disk_image_filepath)
@@ -105,43 +114,41 @@ def main(args):
         
         # Look for installer apps
         installer_app_items = []
+        app_creators = []
         for item in root_items:
-            if item.type == 'APPL' and item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
-                installer_app_items.append(item)
+            if item.type == 'APPL':
+                app_creators.append(item.creator)
+                
+                if item.creator in RECOGNIZED_INSTALLER_APP_CREATORS:
+                    installer_app_items.append(item)
         
         # Identify the primary installer app
         if len(installer_app_items) == 0:
+            if len(app_creators) == 0:
+                details = '(Did not find any applications.)'
+            else:
+                details = '(However applications of type %s were found.)' % \
+                    repr(app_creators)
+            
             # TODO: Continue looking for the designated app...
-            raise NotImplementedError('Did not find any installer applications. Not sure what to do.')
+            raise NotImplementedError(
+                ('Did not find any installer applications. %s ' +
+                 'Not sure what to do.') % details)
             
         elif len(installer_app_items) == 1:
             primary_installer_app_item = installer_app_items[0]
             
         elif len(installer_app_items) >= 2:
-            print 'Found multiple installer applications.'
-            while True:
-                print
-                print 'Please choose the primary installer for this program:'
-                i = 1
-                for item in installer_app_items:
-                    print '    %d: %s' % (i, item.name); i += 1
-                print '    %d: <Cancel>' % i;
-                try:
-                    choice = int(raw_input('Choice? '))
-                    if 1 <= choice <= i:
-                        break
-                    else:
-                        raise ValueError
-                except ValueError:
-                    print 'Not a valid choice.'
-                    continue
-            print
+            choice = choose_from_menu(
+                'Found multiple installer applications.',
+                'Please choose the primary installer for this program:',
+                [item.name for item in installer_app_items] + ['<Cancel>'])
             
-            if choice == i:
+            if choice == len(installer_app_items):
                 # Cancel
                 return
             else:
-                primary_installer_app_item = installer_app_items[choice - 1]
+                primary_installer_app_item = installer_app_items[choice]
         
         # Temporarily mount the disk images inside the VM
         with mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):
@@ -170,22 +177,12 @@ def main(args):
                 # If the user didn't appear to install anything,
                 # provide the option to try again
                 if install_diff == EMPTY_DIFF:
-                    print "It appears you didn't install anything."
-                    print '    1: Try Again'
-                    print '    2: Cancel'
-                    while True:
-                        try:
-                            choice = int(raw_input('Choice? '))
-                            if 1 <= choice <= 2:
-                                break
-                            else:
-                                raise ValueError
-                        except ValueError:
-                            print 'Not a valid choice.'
-                            continue
-                    print
+                    choice = choose_from_menu(
+                        None,
+                        "It appears you didn't install anything.",
+                        ['Try Again', 'Cancel'])
                     
-                    if choice == 1: # Try Again
+                    if choice == 0: # Try Again
                         continue
                     else:           # Cancel
                         return
@@ -225,11 +222,42 @@ def main(args):
         installed_app_filepath_components)
 
 
+def choose_from_menu(prompt, subprompt, menuitems):
+    if prompt is not None:
+        print prompt
+        print
+    
+    while True:
+        print subprompt
+        i = 1
+        for item in menuitems:
+            print '    %d: %s' % (i, item); i += 1
+        try:
+            choice = int(raw_input('Choice? '))
+            if 1 <= choice < i:
+                break
+            else:
+                raise ValueError
+        except ValueError:
+            print 'Not a valid choice.'
+            continue
+        finally:
+            print
+    
+    return choice - 1
+
+
 @contextmanager
 def mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):
-    if len(disk_image_filepaths) != 1:
-        raise NotImplementedError('Multiple simultenous images not yet implemented.')
-    disk_image_filepath = disk_image_filepaths[0]
+    for x in _mdit_helper(box_dirpath, 0, disk_image_filepaths):
+        yield
+
+
+def _mdit_helper(box_dirpath, i, disk_image_filepaths):
+    if i == len(disk_image_filepaths):
+        yield
+        return
+    disk_image_filepath = disk_image_filepaths[i]
     
     mount_dirpath = os.path.join(box_dirpath, 'mount')
     disk_image_ext = os.path.splitext(disk_image_filepath)[1]
@@ -241,7 +269,8 @@ def mount_disk_images_temporarily(box_dirpath, disk_image_filepaths):
     #       links are present.
     os.symlink(disk_image_filepath, link_filepath)
     try:
-        yield
+        for x in _mdit_helper(box_dirpath, i+1, disk_image_filepaths):
+            yield
     finally:
         os.remove(link_filepath)
 
