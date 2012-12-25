@@ -202,7 +202,9 @@ def main(args):
                 
                 if len(installed_apps) == 0:
                     # TODO: Offer to run the installer again or cancel
-                    raise NotImplementedError
+                    raise NotImplementedError(
+                        'No applications found in the installed items. ' +
+                        'Not sure what to do.')
                 elif len(installed_apps) == 1:
                     installed_app_filepath_components = installed_apps[0]
                 elif len(installed_apps) >= 2:
