@@ -6,7 +6,7 @@ Functions to manipulate and examine disk images.
 _DISK_IMAGE_EXTENSIONS = [
     '.dsk', '.hfv', # Raw disk image
     '.toast',       # Toast disk image
-    '.iso',         # ISO disk image
+    '.iso', '.cdr', # ISO disk image
     '.dmg',         # UDIF disk image
     '.img',         # NDIF disk image (Disk Copy 6.3)
 ]
@@ -21,7 +21,7 @@ _MVM_DISK_IMAGE_EXTENSIONS = [
 _BASILISK_DISK_IMAGE_EXTENSIONS = [
     '.dsk', '.hfv', # Raw disk image
     '.toast',       # Toast disk image
-    '.iso',         # ISO disk image
+    '.iso', '.cdr', # ISO disk image
     
     # NOTE: Basilisk doesn't seem to consistently be able mount .img and .dmg correctly.
     #       Workaround on OS X by converting it to a .dsk using the `dd` tool.
