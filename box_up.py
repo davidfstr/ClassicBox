@@ -23,13 +23,19 @@ import sys
 def main(args):
     # Parse flags
     verify_rom = True
-    if len(args) >= 1 and args[0] == '-f':
-        verify_rom = False
+    use_exec = False
+    while len(args) >= 1:
+        if args[0] == '-f':
+            verify_rom = False
+        elif args[0] == '--exec':
+            use_exec = True
+        else:
+            break
         args = args[1:]
     
     # Parse arguments
     if len(args) != 1:
-        sys.exit('syntax: box_up <path to box directory>')
+        sys.exit('syntax: box_up [-f] [--exec] <path to box directory>')
         return
     box_dirpath = os.path.abspath(args[0])
     if not os.path.exists(box_dirpath):
@@ -211,13 +217,23 @@ def main(args):
         rom = None  # permit early garbage collection
         
         # Launch Basilisk/SheepShaver, relocating its preferences file to the 'etc' directory
-        returncode = subprocess.call([emulator_filepath], cwd=box_dirpath, env={
+        box_env = {
             'HOME': etc_dirpath,
-        })
-        
-        # Exit with emulator's return code
-        sys.exit(returncode)
-        return
+        }
+        if use_exec:
+            os.chdir(box_dirpath)
+            arg0 = os.path.basename(emulator_filepath)
+            os.execle(emulator_filepath, arg0, box_env)
+            return
+        else:
+            returncode = subprocess.call(
+                [emulator_filepath],
+                cwd=box_dirpath,
+                env=box_env)
+            
+            # Exit with emulator's return code
+            sys.exit(returncode)
+            return
 
 
 def get_oldworld_rom_embedded_checksum(rom):
