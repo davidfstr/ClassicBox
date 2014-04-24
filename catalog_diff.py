@@ -89,7 +89,7 @@ def main(args):
         remove_ignored_parts_from_catalog_diff(catalog_diff, ignore_tree)
     
     if pretty:
-        print_catalog_diff()
+        print_catalog_diff(catalog_diff)
     else:
         print json.dumps(catalog_diff, ensure_ascii=True)
 
